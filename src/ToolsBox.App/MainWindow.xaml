@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ports="clr-namespace:ToolsBox.App.Ports"
         xmlns:unlocking="clr-namespace:ToolsBox.App.FileUnlocking"
+        xmlns:network="clr-namespace:ToolsBox.App.NetworkTraffic"
         xmlns:views="clr-namespace:ToolsBox.App.Views"
         Title="宝哥工具箱" Icon="Assets/baoge-toolbox.ico" Width="1280" Height="760" MinWidth="980" MinHeight="580"
         WindowStartupLocation="CenterScreen" Background="#F4F6F8">
@@ -12,16 +13,18 @@
         <Style TargetType="ComboBox"><Setter Property="Padding" Value="8,6"/><Setter Property="BorderBrush" Value="#CBD2D9"/></Style>
         <DataTemplate DataType="{x:Type ports:PortMonitorViewModel}"><views:PortMonitorView/></DataTemplate>
         <DataTemplate DataType="{x:Type unlocking:FileUnlockerViewModel}"><views:FileUnlockerView/></DataTemplate>
+        <DataTemplate DataType="{x:Type network:NetworkTrafficViewModel}"><views:NetworkTrafficView/></DataTemplate>
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
         <Border Grid.Column="0" Background="#17212B">
             <Grid Margin="20,24">
-                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                 <StackPanel><TextBlock Text="宝哥工具箱" Foreground="#FFFFFF" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Windows 实用工具" Foreground="#92A4B5" FontSize="12" Margin="1,4,0,0"/></StackPanel>
                 <Button Grid.Row="1" Command="{Binding ShowPortMonitorCommand}" Margin="0,34,0,0" Padding="14,12" HorizontalContentAlignment="Left" Background="#246BFD" BorderBrush="#246BFD" Foreground="White"><StackPanel Orientation="Horizontal"><TextBlock Text="●" Foreground="#8FC1FF" Margin="0,0,10,0"/><TextBlock Text="端口监控" FontWeight="SemiBold"/></StackPanel></Button>
                 <Button Grid.Row="2" Command="{Binding ShowFileUnlockerCommand}" Margin="0,8,0,0" Padding="14,12" HorizontalContentAlignment="Left" Background="#263442" BorderBrush="#34495B" Foreground="White"><StackPanel Orientation="Horizontal"><TextBlock Text="◆" Foreground="#8FC1FF" Margin="0,0,10,0"/><TextBlock Text="文件解锁" FontWeight="SemiBold"/></StackPanel></Button>
-                <TextBlock Grid.Row="4" Text="更多工具将逐步加入" Foreground="#728597" FontSize="11"/>
+                <Button Grid.Row="3" Command="{Binding ShowNetworkTrafficCommand}" Margin="0,8,0,0" Padding="14,12" HorizontalContentAlignment="Left" Background="#263442" BorderBrush="#34495B" Foreground="White"><StackPanel Orientation="Horizontal"><TextBlock Text="↕" Foreground="#8FC1FF" Margin="0,0,10,0"/><TextBlock Text="网络流量" FontWeight="SemiBold"/></StackPanel></Button>
+                <TextBlock Grid.Row="5" Text="更多工具将逐步加入" Foreground="#728597" FontSize="11"/>
             </Grid>
         </Border>
         <ContentControl Grid.Column="1" Content="{Binding CurrentTool}"/>
