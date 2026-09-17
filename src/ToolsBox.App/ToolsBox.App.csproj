@@ -11,6 +11,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <AssemblyName>宝哥工具箱</AssemblyName>
+    <RootNamespace>ToolsBox.App</RootNamespace>
+    <ApplicationIcon>Assets\baoge-toolbox.ico</ApplicationIcon>
+    <Title>宝哥工具箱</Title>
+    <Product>宝哥工具箱</Product>
+    <Description>面向 Windows 的端口监控与文件解锁工具箱</Description>
   </PropertyGroup>
 
 </Project>
