@@ -5,6 +5,10 @@
     <ProjectReference Include="..\ToolsBox.Windows\ToolsBox.Windows.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="Assets\baoge-toolbox.ico" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
