@@ -9,10 +9,11 @@
             <TextBlock Text="检测文件或文件夹的占用进程，并按需解除占用" Foreground="#637381" Margin="0,5,0,0"/>
         </StackPanel>
         <Grid Grid.Row="1" Margin="0,22,0,12">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <TextBox Text="{Binding PathText, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" ToolTip="输入文件或文件夹完整路径"/>
             <Button Grid.Column="1" Content="选择文件" Click="OnBrowseFile"/><Button Grid.Column="2" Content="选择文件夹" Click="OnBrowseFolder"/>
             <Button Grid.Column="3" Content="检测占用" Command="{Binding ScanCommand}" Background="#246BFD" Foreground="White" BorderBrush="#246BFD"/>
+            <Button Grid.Column="4" Content="管理员扫描" Command="{Binding ElevatedScanCommand}"/>
         </Grid>
         <Border Grid.Row="2" BorderBrush="#8FB7FF" BorderThickness="1" Background="#EEF5FF" CornerRadius="6" Padding="12" Margin="0,0,0,12">
             <TextBlock Text="可将单个文件或文件夹直接拖到此窗口，放下后会自动识别并扫描。文件夹会包含全部子项。" Foreground="#315A8A" TextWrapping="Wrap"/>

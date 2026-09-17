@@ -17,10 +17,12 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
     {
         _service = service;
         ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(PathText));
+        ElevatedScanCommand = new AsyncRelayCommand(ScanElevatedAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(PathText));
     }
 
     public ObservableCollection<FileLockEntry> Entries { get; } = [];
     public AsyncRelayCommand ScanCommand { get; }
+    public AsyncRelayCommand ElevatedScanCommand { get; }
 
     public string PathText
     {
@@ -30,6 +32,7 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _pathText, value))
             {
                 ScanCommand.RaiseCanExecuteChanged();
+                ElevatedScanCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -48,6 +51,7 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _isBusy, value))
             {
                 ScanCommand.RaiseCanExecuteChanged();
+                ElevatedScanCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -64,24 +68,34 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
         await ScanAsync();
     }
 
-    public async Task ScanAsync()
+    public Task ScanAsync() => ScanCoreAsync(false);
+
+    public Task ScanElevatedAsync() => ScanCoreAsync(true);
+
+    private async Task ScanCoreAsync(bool elevated)
     {
         _operationCancellation?.Cancel();
         _operationCancellation?.Dispose();
         _operationCancellation = new CancellationTokenSource();
         IsBusy = true;
-        StatusText = "正在扫描系统文件句柄…";
+        StatusText = elevated ? "正在等待管理员授权并扫描…" : "正在扫描系统文件句柄…";
         try
         {
             FileLockTarget target = FileLockTarget.FromExistingPath(PathText);
-            IReadOnlyList<FileLockEntry> locks = await _service.FindLocksAsync(target, _operationCancellation.Token);
+            IReadOnlyList<FileLockEntry> locks = elevated
+                ? await _service.FindLocksElevatedAsync(target, _operationCancellation.Token)
+                : await _service.FindLocksAsync(target, _operationCancellation.Token);
             Entries.Clear();
             foreach (FileLockEntry entry in locks)
             {
                 Entries.Add(entry);
             }
 
-            StatusText = locks.Count == 0 ? "未发现占用，可正常操作该路径" : $"发现 {locks.Count} 个占用句柄";
+            StatusText = locks.Count == 0
+                ? elevated
+                    ? "管理员扫描未发现占用，可正常操作该路径"
+                    : "当前权限未发现占用；若文件仍无法操作，请使用管理员扫描"
+                : $"发现 {locks.Count} 个占用句柄";
         }
         catch (OperationCanceledException)
         {

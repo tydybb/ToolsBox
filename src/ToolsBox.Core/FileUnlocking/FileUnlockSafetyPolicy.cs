@@ -22,6 +22,12 @@ public static class FileUnlockSafetyPolicy
             return false;
         }
 
+        if (entry.ProcessStartedAt is null)
+        {
+            reason = "缺少可验证的进程身份，请使用管理员扫描重新获取占用信息。";
+            return false;
+        }
+
         string processName = Path.GetFileNameWithoutExtension(entry.ProcessName);
         if (ProtectedNames.Contains(processName))
         {

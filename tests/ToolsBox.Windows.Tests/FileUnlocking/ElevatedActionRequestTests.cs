@@ -15,9 +15,10 @@ public sealed class ElevatedActionRequestTests
         ElevatedActionRequest decoded = ElevatedActionRequest.Decode(request.Encode());
 
         Assert.Equal(request.Action, decoded.Action);
-        Assert.Equal(entry.LockedPath, decoded.Entry.LockedPath);
-        Assert.Equal(entry.HandleValue, decoded.Entry.HandleValue);
-        Assert.Equal(entry.ProcessId, decoded.Entry.ProcessId);
-        Assert.Equal(entry.ProcessStartedAt, decoded.Entry.ProcessStartedAt);
+        FileLockEntry decodedEntry = Assert.IsType<FileLockEntry>(decoded.Entry);
+        Assert.Equal(entry.LockedPath, decodedEntry.LockedPath);
+        Assert.Equal(entry.HandleValue, decodedEntry.HandleValue);
+        Assert.Equal(entry.ProcessId, decodedEntry.ProcessId);
+        Assert.Equal(entry.ProcessStartedAt, decodedEntry.ProcessStartedAt);
     }
 }

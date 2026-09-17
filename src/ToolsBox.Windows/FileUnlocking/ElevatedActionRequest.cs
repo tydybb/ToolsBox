@@ -4,7 +4,11 @@ using ToolsBox.Core.FileUnlocking;
 
 namespace ToolsBox.Windows.FileUnlocking;
 
-public sealed record ElevatedActionRequest(string Action, FileLockEntry Entry)
+public sealed record ElevatedActionRequest(
+    string Action,
+    FileLockEntry? Entry = null,
+    FileLockTarget? Target = null,
+    string? ResultPipe = null)
 {
     public string Encode() => Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(this)));
 
