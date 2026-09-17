@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.suo
+.git-codex-backup/
+.git-codex-live/

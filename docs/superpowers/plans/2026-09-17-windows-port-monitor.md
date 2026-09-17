@@ -13,7 +13,7 @@
 ### Task 1: Solution and domain model
 
 **Files:**
-- Create: `ToolsBox.sln`
+- Create: `ToolsBox.slnx`
 - Create: `src/ToolsBox.Core/ToolsBox.Core.csproj`
 - Create: `src/ToolsBox.Core/Ports/PortEntry.cs`
 - Create: `src/ToolsBox.Core/Ports/IPortSnapshotProvider.cs`
@@ -75,6 +75,6 @@
 - Create: `.gitignore`
 
 - [ ] Document requirements, startup command, UI behavior, permission limitations, and extension structure.
-- [ ] Run `dotnet test ToolsBox.sln --configuration Release` and require all tests to pass.
-- [ ] Run `dotnet build ToolsBox.sln --configuration Release --no-restore` and require zero errors and zero warnings.
+- [ ] Run `dotnet test ToolsBox.slnx --configuration Release` and require all tests to pass.
+- [ ] Run `dotnet build ToolsBox.slnx --configuration Release --no-restore` and require zero errors and zero warnings.
 - [ ] Launch the app briefly and confirm the process remains running without an immediate startup crash.
