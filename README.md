@@ -40,6 +40,7 @@
 ## 环境要求
 
 - Windows 10/11
+- 使用发布版：安装 [.NET 8 Desktop Runtime（Windows x64）](https://dotnet.microsoft.com/zh-cn/download/dotnet/8.0)。只装普通 .NET Runtime、ASP.NET Core Runtime 或其他架构版本可能无法运行 WPF 程序。
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)（从源码运行或构建时）
 
 ## 运行
@@ -49,6 +50,24 @@ dotnet run --project .\src\ToolsBox.App\ToolsBox.App.csproj
 ```
 
 ## 构建与测试
+
+### 发布免安装单文件版（不带运行环境）
+
+```powershell
+dotnet publish .\src\ToolsBox.App\ToolsBox.App.csproj -c Release -p:PublishProfile=PortableWinX64
+```
+
+输出为 `bin\publish\win-x64\宝哥工具箱.exe`，目前约 12 MB。Visual Studio 中也可选择 `PortableWinX64` 发布配置。发布版保留启动时的管理员权限要求。
+
+双击 EXE 后，.NET 原生启动器会先检查兼容的运行环境：
+
+- 环境齐全：直接启动工具箱。
+- 缺少 .NET 或所需的 Windows Desktop Runtime：显示官方提示（可能为英文），提供下载入口；用户确认后打开微软下载页面，不自动安装。
+- 手动下载入口：[.NET 8 官方下载页](https://dotnet.microsoft.com/zh-cn/download/dotnet/8.0)，选择 **.NET Desktop Runtime → Windows → x64**，安装完成后重新运行工具箱。运行发布版不需要安装 SDK。
+
+该检查发生在 WPF/C# 代码执行前，不需要另加托管检测窗口。行为参考：[微软启动器说明](https://devblogs.microsoft.com/dotnet/dotnet-apphost-improvements/)。若电脑人为设置了 `DOTNET_DISABLE_GUI_ERRORS=1`，官方弹窗会被禁用；正常发布配置不会设置该变量。单文件依赖中的原生 DLL 会按 .NET 机制释放到用户临时目录，并非运行时完全不落盘。
+
+### 自动化检查
 
 ```powershell
 dotnet test .\ToolsBox.slnx --configuration Release
@@ -62,6 +81,14 @@ dotnet run --project .\tests\ToolsBox.NetworkSmoke --configuration Release -- "E
 ```
 
 请将最后的路径替换为实际构建的程序路径。该验证检查辅助进程不打开主窗口、两轮 ETW 回环 UDP 流量采集与停止重启、读取 QoS 规则以及正常退出；不会新增或修改限速规则。日常单元测试不会自动触发 UAC。
+
+可在管理员 PowerShell 中验证发布版的缺失环境错误路径：
+
+```powershell
+.\scripts\Test-MissingRuntime.ps1 -ExecutablePath .\bin\publish\win-x64\宝哥工具箱.exe
+```
+
+脚本只为测试子进程指定隔离的运行时目录，不卸载现有 .NET，不修改全局环境变量。为避免自动化被对话框阻塞，仅在测试子进程中禁用 GUI 提示并检查错误码、缺失框架名称和官方下载链接；这不代替干净 Windows 机器上的弹窗与下载按钮人工验收。
 
 ## 项目结构
 
