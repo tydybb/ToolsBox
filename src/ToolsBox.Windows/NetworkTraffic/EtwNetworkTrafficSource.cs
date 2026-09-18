@@ -40,11 +40,22 @@ public sealed class EtwNetworkTrafficSource : INetworkTrafficSource
             });
 
             string sessionName = $"BaoGeToolsBox-Network-{Environment.ProcessId}-{Guid.NewGuid():N}";
-            _session = new TraceEventSession(sessionName) { StopOnDispose = true };
-            Subscribe(_session);
-            _session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
-            TraceEventSession session = _session;
-            _processingTask = Task.Run(() => session.Source.Process(), CancellationToken.None);
+            var session = new TraceEventSession(sessionName) { StopOnDispose = true };
+            try
+            {
+                InitializeSession(
+                    () => session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP),
+                    () => Subscribe(session));
+                _session = session;
+                _processingTask = Task.Run(() => session.Source.Process(), CancellationToken.None);
+            }
+            catch
+            {
+                session.Dispose();
+                _channel.Writer.TryComplete();
+                _channel = null;
+                throw;
+            }
         }
 
         return Task.CompletedTask;
@@ -97,6 +108,12 @@ public sealed class EtwNetworkTrafficSource : INetworkTrafficSource
     public async ValueTask DisposeAsync()
     {
         await StopAsync().ConfigureAwait(false);
+    }
+
+    internal static void InitializeSession(Action enableKernelProvider, Action subscribe)
+    {
+        enableKernelProvider();
+        subscribe();
     }
 
     private void Subscribe(TraceEventSession session)
