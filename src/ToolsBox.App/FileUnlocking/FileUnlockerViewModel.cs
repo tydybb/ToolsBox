@@ -68,6 +68,20 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
         await ScanAsync();
     }
 
+    public async Task HandleDroppedPathsAsync(IReadOnlyList<string> paths)
+    {
+        if (IsBusy) return;
+        if (paths.Count != 1 || string.IsNullOrWhiteSpace(paths[0]))
+        {
+            StatusText = "请一次拖入一个文件或文件夹。";
+            return;
+        }
+        await SetPathAndScanAsync(paths[0]);
+    }
+
+    public void ReportDropUnavailable(string reason) =>
+        StatusText = $"拖放暂不可用，请使用选择文件/文件夹按钮：{reason}";
+
     public Task ScanAsync() => ScanCoreAsync(false);
 
     public Task ScanElevatedAsync() => ScanCoreAsync(true);

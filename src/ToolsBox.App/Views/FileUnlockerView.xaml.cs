@@ -32,15 +32,16 @@ public partial class FileUnlockerView : UserControl
 
     private void OnPreviewDragOver(object sender, DragEventArgs e)
     {
-        e.Effects = HasSinglePath(e) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Effects = !ViewModel.IsBusy && HasSinglePath(e) ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
     }
 
     private async void OnDrop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: 1 } paths)
+        e.Handled = true;
+        if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
         {
-            await ViewModel.SetPathAndScanAsync(paths[0]);
+            await ViewModel.HandleDroppedPathsAsync(paths);
         }
     }
 
