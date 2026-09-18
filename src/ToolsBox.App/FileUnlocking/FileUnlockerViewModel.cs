@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using ToolsBox.App.Infrastructure;
 using ToolsBox.Core.FileUnlocking;
 
@@ -12,17 +14,31 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
     private string _statusText = "输入或拖入文件/文件夹开始检测";
     private bool _isBusy;
     private bool _isAdvancedExpanded;
+    private bool _isDisposed;
+    private bool _isUpdatingSelection;
+    private bool? _allSelected = false;
+    private int _selectedCount;
+    private int _selectedProcessCount;
+    private readonly HashSet<FileLockEntry> _observedEntries = new(ReferenceEqualityComparer.Instance);
 
     public FileUnlockerViewModel(IFileLockService service)
     {
         _service = service;
         ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(PathText));
         ElevatedScanCommand = new AsyncRelayCommand(ScanElevatedAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(PathText));
+        ToggleSelectAllCommand = new RelayCommand(ToggleSelectAll, () => CanSelectEntries);
+        Entries.CollectionChanged += OnEntriesChanged;
     }
 
     public ObservableCollection<FileLockEntry> Entries { get; } = [];
     public AsyncRelayCommand ScanCommand { get; }
     public AsyncRelayCommand ElevatedScanCommand { get; }
+    public RelayCommand ToggleSelectAllCommand { get; }
+    public bool? AllSelected => _allSelected;
+    public int SelectedCount => _selectedCount;
+    public int SelectedProcessCount => _selectedProcessCount;
+    public bool CanSelectEntries => !_isDisposed && !IsBusy && Entries.Count > 0;
+    public bool CanActOnSelectedEntries => CanSelectEntries && SelectedCount > 0;
 
     public string PathText
     {
@@ -52,6 +68,7 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
             {
                 ScanCommand.RaiseCanExecuteChanged();
                 ElevatedScanCommand.RaiseCanExecuteChanged();
+                RefreshSelectionAvailability();
             }
         }
     }
@@ -99,10 +116,20 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
             IReadOnlyList<FileLockEntry> locks = elevated
                 ? await _service.FindLocksElevatedAsync(target, _operationCancellation.Token)
                 : await _service.FindLocksAsync(target, _operationCancellation.Token);
-            Entries.Clear();
-            foreach (FileLockEntry entry in locks)
+            _isUpdatingSelection = true;
+            try
             {
-                Entries.Add(entry);
+                Entries.Clear();
+                foreach (FileLockEntry entry in locks)
+                {
+                    entry.IsSelected = false;
+                    Entries.Add(entry);
+                }
+            }
+            finally
+            {
+                _isUpdatingSelection = false;
+                RefreshSelection();
             }
 
             StatusText = locks.Count == 0
@@ -130,6 +157,7 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
 
     public async Task<string> TerminateSelectedProcessesAsync()
     {
+        if (IsBusy || _isDisposed) return "请等待当前操作完成。";
         FileLockEntry[] selected = Entries.Where(item => item.IsSelected).DistinctBy(item => item.ProcessId).ToArray();
         if (selected.Length == 0)
         {
@@ -141,6 +169,7 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
 
     public async Task<string> CloseSelectedHandlesAsync()
     {
+        if (IsBusy || _isDisposed) return "请等待当前操作完成。";
         FileLockEntry[] selected = Entries.Where(item => item.IsSelected).ToArray();
         if (selected.Length == 0)
         {
@@ -188,8 +217,85 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
         return summary;
     }
 
+    private void ToggleSelectAll()
+    {
+        if (!CanSelectEntries) return;
+        bool select = AllSelected != true;
+        _isUpdatingSelection = true;
+        try
+        {
+            foreach (FileLockEntry entry in Entries) entry.IsSelected = select;
+        }
+        finally
+        {
+            _isUpdatingSelection = false;
+            RefreshSelection();
+        }
+    }
+
+    private void OnEntriesChanged(object? sender, NotifyCollectionChangedEventArgs args)
+    {
+        if (args.Action == NotifyCollectionChangedAction.Reset)
+        {
+            foreach (FileLockEntry entry in _observedEntries) entry.PropertyChanged -= OnEntryPropertyChanged;
+            _observedEntries.Clear();
+            foreach (FileLockEntry entry in Entries) ObserveEntry(entry);
+        }
+        else
+        {
+            if (args.OldItems is not null)
+                foreach (FileLockEntry entry in args.OldItems)
+                    if (!Entries.Any(current => ReferenceEquals(current, entry)) && _observedEntries.Remove(entry))
+                        entry.PropertyChanged -= OnEntryPropertyChanged;
+            if (args.NewItems is not null)
+                foreach (FileLockEntry entry in args.NewItems) ObserveEntry(entry);
+        }
+        RefreshSelection();
+    }
+
+    private void ObserveEntry(FileLockEntry entry)
+    {
+        if (_observedEntries.Add(entry)) entry.PropertyChanged += OnEntryPropertyChanged;
+    }
+
+    private void OnEntryPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (string.IsNullOrEmpty(args.PropertyName) || args.PropertyName == nameof(FileLockEntry.IsSelected))
+            RefreshSelection();
+    }
+
+    private void RefreshSelection()
+    {
+        if (_isUpdatingSelection || _isDisposed) return;
+        int count = 0;
+        var processIds = new HashSet<int>();
+        foreach (FileLockEntry entry in Entries)
+        {
+            if (!entry.IsSelected) continue;
+            count++;
+            processIds.Add(entry.ProcessId);
+        }
+        SetProperty(ref _selectedCount, count, nameof(SelectedCount));
+        SetProperty(ref _selectedProcessCount, processIds.Count, nameof(SelectedProcessCount));
+        SetProperty(ref _allSelected, count == 0 ? false : count == Entries.Count ? true : null, nameof(AllSelected));
+        RefreshSelectionAvailability();
+    }
+
+    private void RefreshSelectionAvailability()
+    {
+        OnPropertyChanged(nameof(CanSelectEntries));
+        OnPropertyChanged(nameof(CanActOnSelectedEntries));
+        ToggleSelectAllCommand.RaiseCanExecuteChanged();
+    }
+
     public void Dispose()
     {
+        if (_isDisposed) return;
+        _isDisposed = true;
+        Entries.CollectionChanged -= OnEntriesChanged;
+        foreach (FileLockEntry entry in _observedEntries) entry.PropertyChanged -= OnEntryPropertyChanged;
+        _observedEntries.Clear();
+        RefreshSelectionAvailability();
         _operationCancellation?.Cancel();
         _operationCancellation?.Dispose();
         _operationCancellation = null;

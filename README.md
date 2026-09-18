@@ -1,6 +1,6 @@
 # 宝哥工具箱
 
-面向 Windows 的可扩展桌面工具箱，基于 .NET 8 和 WPF。当前包含实时端口监控、文件解锁和软件网络流量监控工具。
+面向 Windows 的可扩展桌面工具箱，基于 .NET 8 和 WPF。当前包含实时端口监控、文件解锁、软件网络流量监控和压缩包密码找回工具。
 
 ## 端口监控
 
@@ -20,6 +20,7 @@
 - 文件夹检测自动包含其自身以及全部子目录和文件，不需要遍历大目录。
 - 文件路径查询在无窗口辅助进程中隔离执行，单个句柄查询超过 250 毫秒会跳过并提示结果可能不完整；扫描最长 30 秒，结束或失败后恢复检测按钮。已以管理员身份启动时，“管理员扫描”直接复用当前权限。
 - 显示占用进程、PID、实际占用路径、句柄值、进程路径和权限状态。
+- 选择列表头支持全选、取消全选和部分选中状态，覆盖全部当前结果；显示已选记录数及去重后的进程数。扫描或操作时禁用选择，新扫描清空旧选择。
 - “安全结束所选进程”会结束占用进程，适合明确知道目标程序且可以接受未保存数据丢失的场景。
 - “高级危险操作”可以只关闭所选文件句柄，不结束进程。
 - 宝哥工具箱启动时会统一请求管理员权限，文件解锁操作直接使用已获得的系统权限。
@@ -37,12 +38,32 @@
 
 宝哥工具箱启动时会显示 Windows UAC 提示，必须通过管理员授权后才能进入主界面。文件解锁、ETW 网络监控和上传限速因此可以直接使用所需的系统权限；现有辅助进程仍负责隔离危险操作和网络采集生命周期。关闭工具箱时，网络辅助进程和 ETW 会话会一并退出。
 
+启动入口在创建主窗口前显式申请管理员权限，取消授权则退出；EXE 的 `asInvoker` 清单用于允许同一文件承载低权限无界面解析进程，不代表主界面可以免管理员运行。
+
 > 当前版本只限制上传速度，不限制下载速度。完整的双向限速需要安装网络过滤驱动，已在架构中预留扩展接口，但本版本不安装驱动。系统进程或受保护进程可能无法读取程序路径，此类进程仍会显示流量，但不能设置限速。
+
+## 压缩包密码找回
+
+仅用于自己或获授权的本地压缩包，通过候选密码逐一验证，不是绕过加密，也不保证能找回。
+
+- 内置官方 7-Zip 26.03 x64 引擎，无需安装 7-Zip。已用真实加密样本验证 ZIP ZipCrypto / AES、RAR3/4、RAR5、7z，包括 RAR / 7z 加密文件头。
+- 输入路径、浏览或拖入**单个文件**；按签名识别。与文件解锁共用管理员窗口拖放入口，拖入只识别、不自动开始。首版不支持分卷、自解压 EXE、损坏修复或嵌套包递归。
+- 候选模式每行一个密码；保留空格、大小写和 Unicode，跳过空行。导入 UTF-8 文本后分块读取，导入文件优先于页面文本；单行最多 8192 字符，避免异常文件占满内存。
+- 规则模式按“前缀 + 未知部分 + 后缀”生成；长度 0—12，字符集可自由填写并去重，按长度递增尝试。长度 0 只验证前后缀。页面显示组合总数，不一次展开整个搜索空间。
+- 串行尝试，支持停止、重新开始；切换页面保留任务。停止后重启从首个候选开始，不支持续跑或 GPU 加速。
+- 默认每个候选最多验证 30 秒，可调整为 1—300 秒；超时、资源不足或不支持的方法会停止任务。某些 7z / RAR 错误不能区分密码不符和损坏，会累计显示“密码可能不符或压缩包损坏”并继续；只有全部受保护数据完整校验通过才报告找到密码。
+- 原包只读，解密输出直接丢弃，不解压、不执行内部文件、不修改密码、不上传。密码不写入命令行、环境变量、日志或设置。结果默认遮罩，需主动显示或复制；复制会进入系统剪贴板及可能启用的剪贴板历史。
+- 原生解析运行于去除管理员能力的中等完整性辅助进程；设置 768 MiB 提交内存上限、单进程作业限制及关闭即终止。IPC 校验双方 PID 与会话，并限制消息长度。当前用户无法读取的包会停止并提示失败，不自动提升解析进程权限。
+- DLL 释放到用户临时目录中的固定版本/哈希缓存，验证 SHA-256 并锁定文件/目录防止替换及链接重定向；不会从压缩包目录或 PATH 加载同名 DLL。
+
+完全未知的复杂密码通常无法实用地穷举：例如 94 个可选字符的 8 位密码有约 6.1×10¹⁵ 种组合。优先使用记得的密码、前后缀与少量未知位置，减少搜索范围。
+
+许可可在工具页面点击“内置引擎与第三方许可”查看（单文件 EXE 中同样内嵌）。固定版本来源、对应源码和修改/重建方法见 [引擎说明](src/ToolsBox.Windows/Assets/ArchiveEngine-NOTICE.md)，含 LGPL、BSD 及 unRAR 限制；RAR 测试样本附原 MIT 许可。
 
 ## 环境要求
 
 - Windows 10/11
-- 使用发布版：安装 [.NET 8 Desktop Runtime（Windows x64）](https://dotnet.microsoft.com/zh-cn/download/dotnet/8.0)。只装普通 .NET Runtime、ASP.NET Core Runtime 或其他架构版本可能无法运行 WPF 程序。
+- 不带运行环境的发布版：安装 [.NET 8 Desktop Runtime（Windows x64）](https://dotnet.microsoft.com/zh-cn/download/dotnet/8.0)。内置 .NET 的版本无需另装运行环境。
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)（从源码运行或构建时）
 
 ## 运行
@@ -59,7 +80,7 @@ dotnet run --project .\src\ToolsBox.App\ToolsBox.App.csproj
 dotnet publish .\src\ToolsBox.App\ToolsBox.App.csproj -c Release -p:PublishProfile=PortableWinX64
 ```
 
-输出为 `bin\publish\win-x64\宝哥工具箱.exe`，目前约 12 MB。Visual Studio 中也可选择 `PortableWinX64` 发布配置。发布版保留启动时的管理员权限要求。
+输出为 `bin\publish\win-x64\宝哥工具箱.exe`，具体体积随内置组件变化。Visual Studio 中也可选择 `PortableWinX64` 发布配置。发布版保留启动时的管理员权限要求。
 
 双击 EXE 后，.NET 原生启动器会先检查兼容的运行环境：
 
@@ -70,6 +91,20 @@ dotnet publish .\src\ToolsBox.App\ToolsBox.App.csproj -c Release -p:PublishProfi
 该检查发生在 WPF/C# 代码执行前，不需要另加托管检测窗口。行为参考：[微软启动器说明](https://devblogs.microsoft.com/dotnet/dotnet-apphost-improvements/)。若电脑人为设置了 `DOTNET_DISABLE_GUI_ERRORS=1`，官方弹窗会被禁用；正常发布配置不会设置该变量。单文件依赖中的原生 DLL 会按 .NET 机制释放到用户临时目录，并非运行时完全不落盘。
 
 ### 自动化检查
+
+内置 .NET 的单文件发布：
+
+```powershell
+dotnet publish .\src\ToolsBox.App\ToolsBox.App.csproj -c Release -p:PublishProfile=PortableWinX64 -p:SelfContained=true -p:EnableCompressionInSingleFile=true -p:PublishDir=E:\work\ToolsBox\bin\publish\self-contained-win-x64\
+```
+
+在正常 Windows 用户环境中验证实际发布物的八类加密样本（只测试附带的已知密码样本）：
+
+```powershell
+dotnet run --project .\tests\ToolsBox.ArchiveSmoke -c Release -- "E:\work\ToolsBox\bin\publish\win-x64\宝哥工具箱.exe" ".\tests\ToolsBox.App.Tests\ArchiveRecovery\Fixtures"
+```
+
+受限沙箱可能阻止创建受限令牌或锁定目录，进程隔离集成测试需在正常 Windows 用户环境运行。
 
 ```powershell
 dotnet test .\ToolsBox.slnx --configuration Release

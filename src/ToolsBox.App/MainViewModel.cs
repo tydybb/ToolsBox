@@ -2,6 +2,7 @@ using ToolsBox.App.FileUnlocking;
 using ToolsBox.App.Infrastructure;
 using ToolsBox.App.NetworkTraffic;
 using ToolsBox.App.Ports;
+using ToolsBox.App.ArchiveRecovery;
 
 namespace ToolsBox.App;
 
@@ -17,15 +18,19 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         PortMonitor = portMonitor;
         FileUnlocker = fileUnlocker;
         NetworkTraffic = networkTraffic;
+        ArchiveRecovery = new ArchiveRecoveryViewModel();
         _currentTool = PortMonitor;
         ShowPortMonitorCommand = new RelayCommand(() => CurrentTool = PortMonitor);
         ShowFileUnlockerCommand = new RelayCommand(() => CurrentTool = FileUnlocker);
         ShowNetworkTrafficCommand = new RelayCommand(() => CurrentTool = NetworkTraffic);
+        ShowArchiveRecoveryCommand = new RelayCommand(() => CurrentTool = ArchiveRecovery);
     }
 
     public PortMonitorViewModel PortMonitor { get; }
     public FileUnlockerViewModel FileUnlocker { get; }
     public NetworkTrafficViewModel NetworkTraffic { get; }
+    public ArchiveRecoveryViewModel ArchiveRecovery { get; }
+    public RelayCommand ShowArchiveRecoveryCommand { get; }
     public RelayCommand ShowPortMonitorCommand { get; }
     public RelayCommand ShowFileUnlockerCommand { get; }
     public RelayCommand ShowNetworkTrafficCommand { get; }
@@ -40,6 +45,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(IsPortMonitorSelected));
                 OnPropertyChanged(nameof(IsFileUnlockerSelected));
                 OnPropertyChanged(nameof(IsNetworkTrafficSelected));
+                OnPropertyChanged(nameof(IsArchiveRecoverySelected));
             }
         }
     }
@@ -47,6 +53,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool IsPortMonitorSelected => ReferenceEquals(CurrentTool, PortMonitor);
     public bool IsFileUnlockerSelected => ReferenceEquals(CurrentTool, FileUnlocker);
     public bool IsNetworkTrafficSelected => ReferenceEquals(CurrentTool, NetworkTraffic);
+    public bool IsArchiveRecoverySelected => ReferenceEquals(CurrentTool, ArchiveRecovery);
 
     public Task InitializeAsync() => PortMonitor.InitializeAsync();
 
@@ -55,5 +62,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         PortMonitor.Dispose();
         FileUnlocker.Dispose();
         NetworkTraffic.Dispose();
+        ArchiveRecovery.Dispose();
     }
 }

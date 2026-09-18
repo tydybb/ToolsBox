@@ -4,6 +4,7 @@
         xmlns:ports="clr-namespace:ToolsBox.App.Ports"
         xmlns:unlocking="clr-namespace:ToolsBox.App.FileUnlocking"
         xmlns:network="clr-namespace:ToolsBox.App.NetworkTraffic"
+        xmlns:archive="clr-namespace:ToolsBox.App.ArchiveRecovery"
         xmlns:views="clr-namespace:ToolsBox.App.Views"
         Title="宝哥工具箱" Icon="Assets/baoge-toolbox.ico" Width="1280" Height="760" MinWidth="980" MinHeight="580"
         WindowStartupLocation="CenterScreen" Background="#F4F6F8">
@@ -43,12 +44,13 @@
         <DataTemplate DataType="{x:Type ports:PortMonitorViewModel}"><views:PortMonitorView/></DataTemplate>
         <DataTemplate DataType="{x:Type unlocking:FileUnlockerViewModel}"><views:FileUnlockerView/></DataTemplate>
         <DataTemplate DataType="{x:Type network:NetworkTrafficViewModel}"><views:NetworkTrafficView/></DataTemplate>
+        <DataTemplate DataType="{x:Type archive:ArchiveRecoveryViewModel}"><views:ArchiveRecoveryView/></DataTemplate>
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
         <Border Grid.Column="0" Background="#17212B">
             <Grid Margin="20,24">
-                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                 <StackPanel><TextBlock Text="宝哥工具箱" Foreground="#FFFFFF" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Windows 实用工具" Foreground="#92A4B5" FontSize="12" Margin="1,4,0,0"/></StackPanel>
                 <RadioButton x:Name="PortNavigation" Grid.Row="1" Style="{StaticResource ToolNavigationStyle}" GroupName="Tools"
                              Command="{Binding ShowPortMonitorCommand}" IsChecked="{Binding IsPortMonitorSelected, Mode=OneWay}" Margin="0,34,0,0">
@@ -62,7 +64,11 @@
                              Command="{Binding ShowNetworkTrafficCommand}" IsChecked="{Binding IsNetworkTrafficSelected, Mode=OneWay}">
                     <StackPanel Orientation="Horizontal"><TextBlock Text="↕" Foreground="#8FC1FF" Margin="0,0,10,0"/><TextBlock Text="网络流量" FontWeight="SemiBold"/></StackPanel>
                 </RadioButton>
-                <TextBlock Grid.Row="5" Text="更多工具将逐步加入" Foreground="#728597" FontSize="11"/>
+                <RadioButton x:Name="ArchiveNavigation" Grid.Row="4" Style="{StaticResource ToolNavigationStyle}" GroupName="Tools"
+                             Command="{Binding ShowArchiveRecoveryCommand}" IsChecked="{Binding IsArchiveRecoverySelected, Mode=OneWay}">
+                    <TextBlock Text="压缩包密码找回" FontWeight="SemiBold"/>
+                </RadioButton>
+                <TextBlock Grid.Row="6" Text="更多工具将逐步加入" Foreground="#728597" FontSize="11"/>
             </Grid>
         </Border>
         <ContentControl Grid.Column="1" Content="{Binding CurrentTool}"/>

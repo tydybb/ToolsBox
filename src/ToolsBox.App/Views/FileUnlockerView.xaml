@@ -21,7 +21,23 @@
         <Border Grid.Row="3" Background="White" BorderBrush="#DDE3E8" BorderThickness="1" CornerRadius="6">
             <DataGrid ItemsSource="{Binding Entries}" AutoGenerateColumns="False" IsReadOnly="False" CanUserAddRows="False" CanUserDeleteRows="False" GridLinesVisibility="Horizontal" BorderThickness="0" RowHeaderWidth="0" AlternatingRowBackground="#F8FAFC" ColumnHeaderHeight="38" RowHeight="34">
                 <DataGrid.Columns>
-                    <DataGridCheckBoxColumn Header="选择" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="55"/>
+                    <DataGridTemplateColumn Width="80" CanUserSort="False">
+                        <DataGridTemplateColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <CheckBox Content="全选" IsThreeState="True"
+                                          IsChecked="{Binding DataContext.AllSelected, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=OneWay}"
+                                          Command="{Binding DataContext.ToggleSelectAllCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                          IsEnabled="{Binding DataContext.CanSelectEntries, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.HeaderTemplate>
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          IsEnabled="{Binding DataContext.CanSelectEntries, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="进程" Binding="{Binding ProcessName}" IsReadOnly="True" Width="130"/>
                     <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" IsReadOnly="True" Width="75"/>
                     <DataGridTextColumn Header="占用路径" Binding="{Binding LockedPath}" IsReadOnly="True" Width="*" MinWidth="240"/>
@@ -32,12 +48,18 @@
             </DataGrid>
         </Border>
         <Grid Grid.Row="4" Margin="0,12,0,8">
-            <TextBlock Text="{Binding StatusText}" Foreground="#52616B" TextWrapping="Wrap" VerticalAlignment="Center"/>
-            <Button Content="安全结束所选进程" HorizontalAlignment="Right" Click="OnTerminateProcesses" Background="#FFF2F2" BorderBrush="#EAA4A4" Foreground="#9B2C2C"/>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                <TextBlock Text="{Binding StatusText}" Foreground="#52616B" TextWrapping="Wrap"/>
+                <TextBlock Foreground="#52616B" Margin="0,4,0,0">
+                    <Run Text="已选 "/><Run Text="{Binding SelectedCount, Mode=OneWay}"/><Run Text=" 条记录，涉及 "/><Run Text="{Binding SelectedProcessCount, Mode=OneWay}"/><Run Text=" 个进程"/>
+                </TextBlock>
+            </StackPanel>
+            <Button Grid.Column="1" Content="安全结束所选进程" HorizontalAlignment="Right" Click="OnTerminateProcesses" IsEnabled="{Binding CanActOnSelectedEntries}" Background="#FFF2F2" BorderBrush="#EAA4A4" Foreground="#9B2C2C"/>
         </Grid>
         <Expander Grid.Row="5" Header="高级危险操作" IsExpanded="{Binding IsAdvancedExpanded}" Foreground="#9B2C2C">
             <Border Background="#FFF7ED" BorderBrush="#F1B97A" BorderThickness="1" CornerRadius="5" Padding="12" Margin="0,8,0,0">
-                <DockPanel><TextBlock Text="强制关闭句柄可能使占用程序崩溃或损坏未保存数据。" Foreground="#8A4B08" VerticalAlignment="Center"/><Button Content="强制关闭所选句柄" DockPanel.Dock="Right" HorizontalAlignment="Right" Click="OnCloseHandles" Background="#C53030" Foreground="White" BorderBrush="#C53030"/></DockPanel>
+                <DockPanel><TextBlock Text="强制关闭句柄可能使占用程序崩溃或损坏未保存数据。" Foreground="#8A4B08" VerticalAlignment="Center"/><Button Content="强制关闭所选句柄" DockPanel.Dock="Right" HorizontalAlignment="Right" Click="OnCloseHandles" IsEnabled="{Binding CanActOnSelectedEntries}" Background="#C53030" Foreground="White" BorderBrush="#C53030"/></DockPanel>
             </Border>
         </Expander>
     </Grid>

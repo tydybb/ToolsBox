@@ -2,6 +2,10 @@ using System.Windows;
 using ToolsBox.Core.FileUnlocking;
 using ToolsBox.Windows.FileUnlocking;
 using ToolsBox.Windows.NetworkTraffic;
+using ToolsBox.App.Infrastructure;
+using System.Diagnostics;
+using System.Security.Principal;
+using System.ComponentModel;
 
 namespace ToolsBox.App;
 
@@ -12,6 +16,15 @@ public partial class App : Application
         // Helpers share this executable but must remain headless across awaits.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         base.OnStartup(e);
+
+        if (e.Args.Length > 0 && e.Args[0] == "--archive-worker")
+        {
+            int code = e.Args.Length == 4
+                ? await ToolsBox.Windows.ArchiveRecovery.ArchiveRecoveryWorker.RunAsync(e.Args[1], e.Args[2], e.Args[3])
+                : 1;
+            Shutdown(code);
+            return;
+        }
 
         if (e.Args.Length == 1 && e.Args[0] == "--file-path-worker")
         {
@@ -58,6 +71,32 @@ public partial class App : Application
 
         if (e.Args.Length > 0 && e.Args[0].StartsWith("--elevated-", StringComparison.Ordinal))
         {
+            Shutdown(1);
+            return;
+        }
+
+        using var identity = WindowsIdentity.GetCurrent();
+        bool administrator = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+        try
+        {
+            if (!administrator && e.Args.Contains("--administrator-start"))
+                throw new InvalidOperationException("未能取得管理员权限。");
+            if (!AdministratorStartup.EnsureAdministrator(administrator,
+                    info => { using var process = Process.Start(info) ?? throw new InvalidOperationException("无法启动管理员进程。"); },
+                    Environment.ProcessPath!, Environment.GetCommandLineArgs().FirstOrDefault()))
+            {
+                Shutdown(0);
+                return;
+            }
+        }
+        catch (Win32Exception error) when (error.NativeErrorCode == 1223)
+        {
+            Shutdown(0); // User declined UAC; never open a non-elevated main window.
+            return;
+        }
+        catch
+        {
+            MessageBox.Show("启动需要管理员权限，但未能完成授权。请右键以管理员身份运行。", "宝哥工具箱", MessageBoxButton.OK, MessageBoxImage.Warning);
             Shutdown(1);
             return;
         }

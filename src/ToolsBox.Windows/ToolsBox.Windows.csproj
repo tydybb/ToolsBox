@@ -6,6 +6,13 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.21" />
+    <PackageReference Include="SharpSevenZip" Version="2.0.128" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\7z.dll" LogicalName="ToolsBox.ArchiveRecovery.7z.dll" />
+    <EmbeddedResource Include="Assets\*-LICENSE.txt" />
+    <EmbeddedResource Include="Assets\ArchiveEngine-NOTICE.md" />
   </ItemGroup>
 
   <ItemGroup>

@@ -33,6 +33,7 @@ public partial class MainWindow : Window
         SourceInitialized += OnSourceInitialized;
         _viewModel.PropertyChanged += OnDropStateChanged;
         _viewModel.FileUnlocker.PropertyChanged += OnDropStateChanged;
+        _viewModel.ArchiveRecovery.PropertyChanged += OnDropStateChanged;
         Loaded += OnLoaded;
         Closed += OnClosed;
     }
@@ -49,6 +50,7 @@ public partial class MainWindow : Window
         catch (Exception exception)
         {
             _viewModel.FileUnlocker.ReportDropUnavailable(exception.Message);
+            _viewModel.ArchiveRecovery.ReportDropUnavailable();
         }
     }
 
@@ -61,7 +63,8 @@ public partial class MainWindow : Window
     {
         try
         {
-            _fileDrops?.SetEnabled(_viewModel.IsFileUnlockerSelected && !_viewModel.FileUnlocker.IsBusy);
+            _fileDrops?.SetEnabled((_viewModel.IsFileUnlockerSelected && !_viewModel.FileUnlocker.IsBusy)
+                || (_viewModel.IsArchiveRecoverySelected && !_viewModel.ArchiveRecovery.IsBusy));
         }
         catch (Exception exception)
         {
@@ -74,12 +77,14 @@ public partial class MainWindow : Window
     private async void OnFilesDropped(string[] paths)
     {
         if (_viewModel.IsFileUnlockerSelected) await _viewModel.FileUnlocker.HandleDroppedPathsAsync(paths);
+        else if (_viewModel.IsArchiveRecoverySelected) _viewModel.ArchiveRecovery.HandleDroppedPaths(paths);
     }
 
     private void OnClosed(object? sender, EventArgs e)
     {
         _viewModel.PropertyChanged -= OnDropStateChanged;
         _viewModel.FileUnlocker.PropertyChanged -= OnDropStateChanged;
+        _viewModel.ArchiveRecovery.PropertyChanged -= OnDropStateChanged;
         _fileDrops?.Dispose();
         _viewModel.Dispose();
     }
