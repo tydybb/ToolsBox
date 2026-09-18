@@ -23,6 +23,7 @@ public sealed class NetworkTrafficViewModelTests
         source.Publish(
             new NetworkTrafficDelta(10, StartedAt.AddMinutes(-1), NetworkTrafficDirection.Upload, 100, StartedAt),
             new NetworkTrafficDelta(20, StartedAt.AddMinutes(-1), NetworkTrafficDirection.Download, 500, StartedAt));
+        await WaitUntilAsync(() => source.DeliveredCount == 2);
         clock.Tick(StartedAt.AddSeconds(1));
         await WaitUntilAsync(() => viewModel.Items.Count == 2);
 
@@ -41,6 +42,7 @@ public sealed class NetworkTrafficViewModelTests
         using var viewModel = CreateViewModel(source, metadata, clock);
         await viewModel.StartAsync();
         source.Publish(new NetworkTrafficDelta(42, StartedAt.AddMinutes(-1), NetworkTrafficDirection.Upload, 1024, StartedAt));
+        await WaitUntilAsync(() => source.DeliveredCount == 1);
         clock.Tick(StartedAt.AddSeconds(1));
         await WaitUntilAsync(() => viewModel.Items.Count == 1);
 
@@ -61,6 +63,7 @@ public sealed class NetworkTrafficViewModelTests
         using var viewModel = CreateViewModel(source, CreateSingleMetadata(), clock);
         await viewModel.StartAsync();
         source.Publish(new NetworkTrafficDelta(42, StartedAt.AddMinutes(-1), NetworkTrafficDirection.Upload, 512, StartedAt));
+        await WaitUntilAsync(() => source.DeliveredCount == 1);
         clock.Tick(StartedAt.AddSeconds(1));
         await WaitUntilAsync(() => viewModel.Items.Count == 1);
         clock.Set(StartedAt.AddSeconds(2));
@@ -94,6 +97,7 @@ public sealed class NetworkTrafficViewModelTests
         using var viewModel = CreateViewModel(source, CreateSingleMetadata(), clock);
         await viewModel.StartAsync();
         source.Publish(new NetworkTrafficDelta(42, StartedAt.AddMinutes(-1), NetworkTrafficDirection.Upload, 512, StartedAt));
+        await WaitUntilAsync(() => source.DeliveredCount == 1);
         clock.Tick(StartedAt.AddSeconds(1));
         await WaitUntilAsync(() => viewModel.Items.Count == 1);
 
@@ -184,8 +188,10 @@ public sealed class NetworkTrafficViewModelTests
     private sealed class FakeTrafficSource : INetworkTrafficSource
     {
         private readonly Channel<NetworkTrafficDelta> _channel = Channel.CreateUnbounded<NetworkTrafficDelta>();
+        private int _deliveredCount;
         public int StartCount { get; private set; }
         public int StopCount { get; private set; }
+        public int DeliveredCount => Volatile.Read(ref _deliveredCount);
         public Exception? StartError { get; init; }
         public long DroppedEventCount => 0;
 
@@ -196,8 +202,15 @@ public sealed class NetworkTrafficViewModelTests
             return Task.CompletedTask;
         }
 
-        public IAsyncEnumerable<NetworkTrafficDelta> ReadAllAsync(CancellationToken cancellationToken = default) =>
-            _channel.Reader.ReadAllAsync(cancellationToken);
+        public async IAsyncEnumerable<NetworkTrafficDelta> ReadAllAsync(
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await foreach (NetworkTrafficDelta delta in _channel.Reader.ReadAllAsync(cancellationToken))
+            {
+                yield return delta;
+                Interlocked.Increment(ref _deliveredCount);
+            }
+        }
 
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
