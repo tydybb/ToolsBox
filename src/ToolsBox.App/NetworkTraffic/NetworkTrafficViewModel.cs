@@ -253,11 +253,23 @@ public sealed class NetworkTrafficViewModel : ObservableObject, IDisposable
         }
     }
 
-    private Task HandleBackgroundFailureAsync(Exception exception) => _dispatcher.InvokeAsync(() =>
+    private async Task HandleBackgroundFailureAsync(Exception exception)
     {
-        IsMonitoring = false;
-        StatusText = $"网络辅助进程已断开：{exception.Message}";
-    });
+        _sessionCancellation?.Cancel();
+        try
+        {
+            await _source.StopAsync().ConfigureAwait(false);
+        }
+        catch
+        {
+        }
+
+        await _dispatcher.InvokeAsync(() =>
+        {
+            IsMonitoring = false;
+            StatusText = $"网络辅助进程已断开：{exception.Message}";
+        }).ConfigureAwait(false);
+    }
 
     private void ApplyFilter()
     {

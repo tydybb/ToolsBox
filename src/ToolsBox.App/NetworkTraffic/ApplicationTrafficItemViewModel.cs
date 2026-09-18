@@ -24,7 +24,7 @@ public sealed class ApplicationTrafficItemViewModel : ObservableObject
     public ImageSource? Icon => ApplicationIconProvider.Get(_snapshot.ExecutablePath);
     public string ApplicationName => _snapshot.ApplicationName;
     public string ExecutablePath => _snapshot.ExecutablePath ?? "路径不可访问";
-    public bool CanLimit => _snapshot.CanLimit && (_limitRule is null || !_limitRule.HasConflict || _limitRule.IsOwned);
+    public bool CanLimit => _snapshot.CanLimit && (_limitRule is null || !_limitRule.HasConflict);
     public long UploadBytesPerSecond => _snapshot.UploadBytesPerSecond;
     public long DownloadBytesPerSecond => _snapshot.DownloadBytesPerSecond;
     public long TotalUploadBytes => _snapshot.TotalUploadBytes;

@@ -1,3 +1,4 @@
+using System.IO;
 using System.Threading.Channels;
 using ToolsBox.App.NetworkTraffic;
 using ToolsBox.Core.NetworkTraffic;
@@ -86,6 +87,66 @@ public sealed class NetworkTrafficViewModelTests
     }
 
     [Fact]
+    public async Task ReaderFailure_StopsSamplingAndPreservesLastSnapshot()
+    {
+        var source = new FakeTrafficSource();
+        var clock = new TestNetworkTrafficClock(StartedAt);
+        using var viewModel = CreateViewModel(source, CreateSingleMetadata(), clock);
+        await viewModel.StartAsync();
+        source.Publish(new NetworkTrafficDelta(42, StartedAt.AddMinutes(-1), NetworkTrafficDirection.Upload, 512, StartedAt));
+        clock.Tick(StartedAt.AddSeconds(1));
+        await WaitUntilAsync(() => viewModel.Items.Count == 1);
+
+        source.Fail(new IOException("pipe closed"));
+        await WaitUntilAsync(() => viewModel.StatusText.Contains("pipe closed", StringComparison.Ordinal));
+        clock.Tick(StartedAt.AddSeconds(2));
+        await Task.Delay(50);
+
+        Assert.False(viewModel.IsMonitoring);
+        Assert.Contains("pipe closed", viewModel.StatusText);
+        Assert.Equal(512, viewModel.Items[0].TotalUploadBytes);
+        Assert.Equal(1, source.StopCount);
+    }
+
+    [Fact]
+    public void ApplicationRow_WithOwnedRuleAndForeignConflict_DisablesLimitAction()
+    {
+        ProcessMetadata metadata = CreateSingleMetadata().Single;
+        var process = new ProcessTrafficSnapshot(
+            metadata.Identity,
+            metadata.ProcessName,
+            metadata.ExecutablePath,
+            true,
+            false,
+            0,
+            0,
+            0,
+            0);
+        var snapshot = new ApplicationTrafficSnapshot(
+            metadata.ExecutablePath!,
+            metadata.ProcessName,
+            metadata.ExecutablePath,
+            true,
+            0,
+            0,
+            0,
+            0,
+            [process]);
+        var rule = new BandwidthLimitRule(
+            "BaoGeToolsBox-test",
+            metadata.ExecutablePath!,
+            BandwidthDirection.Upload,
+            1024,
+            true,
+            true,
+            "与外部策略冲突");
+
+        var item = new ApplicationTrafficItemViewModel(snapshot, rule);
+
+        Assert.False(item.CanLimit);
+    }
+
+    [Fact]
     public void Dispose_IsIdempotent()
     {
         var viewModel = CreateViewModel(
@@ -149,12 +210,16 @@ public sealed class NetworkTrafficViewModelTests
             foreach (NetworkTrafficDelta delta in deltas) _channel.Writer.TryWrite(delta);
         }
 
+        public void Fail(Exception exception) => _channel.Writer.TryComplete(exception);
+
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private sealed class FakeMetadataProvider(params ProcessMetadata[] values) : IProcessMetadataProvider
     {
         private readonly ProcessMetadata[] _values = values;
+
+        public ProcessMetadata Single => Assert.Single(_values);
 
         public ValueTask<ProcessMetadata> GetAsync(int processId, DateTimeOffset? knownStartTime, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(_values.Single(item => item.Identity.ProcessId == processId));
