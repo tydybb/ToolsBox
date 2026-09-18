@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text.Json;
+using System.Security.Principal;
 using ToolsBox.Core.FileUnlocking;
 
 namespace ToolsBox.Windows.FileUnlocking;
@@ -9,16 +10,32 @@ namespace ToolsBox.Windows.FileUnlocking;
 public sealed class WindowsFileLockService : IFileLockService
 {
     private readonly SystemHandleScanner _scanner = new();
+    private readonly string? _workerExecutable;
+
+    public WindowsFileLockService(string? workerExecutable = null) => _workerExecutable = workerExecutable;
 
     public Task<IReadOnlyList<FileLockEntry>> FindLocksAsync(FileLockTarget target, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(target);
-        return Task.Run(() => _scanner.Scan(target, cancellationToken), cancellationToken);
+        return Task.Run(() =>
+        {
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            deadline.CancelAfter(TimeSpan.FromSeconds(30));
+            try { return _scanner.Scan(target, deadline.Token, _workerExecutable); }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException("扫描超过 30 秒，已停止扫描并释放辅助进程。结果未完成，请重试。");
+            }
+        }, cancellationToken);
     }
 
     public async Task<IReadOnlyList<FileLockEntry>> FindLocksElevatedAsync(FileLockTarget target, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(target);
+        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException();
+        using var identity = WindowsIdentity.GetCurrent();
+        if (new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator))
+            return await FindLocksAsync(target, cancellationToken);
         string pipeName = $"ToolsBox-elevated-scan-{Guid.NewGuid():N}";
         using var pipe = new NamedPipeServerStream(pipeName, PipeDirection.In, 1,
             PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
@@ -45,7 +62,8 @@ public sealed class WindowsFileLockService : IFileLockService
             throw new UnauthorizedAccessException(result.Message);
         }
 
-        return JsonSerializer.Deserialize<FileLockEntry[]>(json) ?? [];
+        ScanReport report = JsonSerializer.Deserialize<ScanReport>(json) ?? throw new InvalidDataException("管理员扫描响应无效。");
+        return new FileLockScanResult(report.Entries, report.SkippedHandleCount);
     }
 
     public Task<FileUnlockResult> CloseHandleAsync(FileLockEntry entry, CancellationToken cancellationToken = default) =>
@@ -69,13 +87,15 @@ public sealed class WindowsFileLockService : IFileLockService
 
     private static FileUnlockResult ExecuteElevatedScan(FileLockTarget target, string pipeName, CancellationToken cancellationToken)
     {
-        IReadOnlyList<FileLockEntry> entries = new SystemHandleScanner().Scan(target, cancellationToken);
+        IReadOnlyList<FileLockEntry> entries = new WindowsFileLockService().FindLocksAsync(target, cancellationToken).GetAwaiter().GetResult();
         using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.Out);
         pipe.Connect(10000);
         using var writer = new StreamWriter(pipe);
-        writer.Write(JsonSerializer.Serialize(entries));
+        writer.Write(JsonSerializer.Serialize(new ScanReport(entries.ToArray(), (entries as FileLockScanResult)?.SkippedHandleCount ?? 0)));
         return FileUnlockResult.Success("管理员扫描已完成。" );
     }
+
+    private sealed record ScanReport(FileLockEntry[] Entries, int SkippedHandleCount);
 
     private static async Task<FileUnlockResult> ExecuteWithElevationAsync(string action, FileLockEntry entry, CancellationToken cancellationToken)
     {

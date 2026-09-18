@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="ToolsBox.Windows.Tests" />
+    <InternalsVisibleTo Include="ToolsBox.App.Tests" />
   </ItemGroup>
 
   <PropertyGroup>

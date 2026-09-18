@@ -1,8 +1,9 @@
 using System.Diagnostics;
+using System.IO;
 using ToolsBox.Core.FileUnlocking;
 using ToolsBox.Windows.FileUnlocking;
 
-namespace ToolsBox.Windows.Tests.FileUnlocking;
+namespace ToolsBox.App.Tests.Startup;
 
 public sealed class SystemHandleScannerTests
 {
@@ -19,7 +20,7 @@ public sealed class SystemHandleScannerTests
         try
         {
             await using FileStream stream = new(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-            var service = new WindowsFileLockService();
+            var service = CreateService();
 
             IReadOnlyList<FileLockEntry> entries = await service.FindLocksAsync(FileLockTarget.FromExistingPath(path));
 
@@ -46,7 +47,7 @@ public sealed class SystemHandleScannerTests
         try
         {
             Assert.Equal("READY", await holder.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(10)));
-            var service = new WindowsFileLockService();
+            var service = CreateService();
             IReadOnlyList<FileLockEntry> entries = await service.FindLocksAsync(FileLockTarget.FromExistingPath(path));
             FileLockEntry entry = Assert.Single(entries.Where(item => item.ProcessId == holder.Id));
 
@@ -87,4 +88,7 @@ public sealed class SystemHandleScannerTests
         startInfo.Environment["TOOLSBOX_LOCK_TEST"] = path;
         return Process.Start(startInfo) ?? throw new InvalidOperationException("无法启动测试锁定进程。");
     }
+
+    private static WindowsFileLockService CreateService() => new(
+        Environment.GetEnvironmentVariable("TOOLSBOX_TEST_WORKER") ?? Path.Combine(AppContext.BaseDirectory, "宝哥工具箱.dll"));
 }

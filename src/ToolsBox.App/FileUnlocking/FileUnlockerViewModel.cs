@@ -110,6 +110,8 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
                     ? "管理员扫描未发现占用，可正常操作该路径"
                     : "当前权限未发现占用；若文件仍无法操作，请使用管理员扫描"
                 : $"发现 {locks.Count} 个占用句柄";
+            if (locks is FileLockScanResult { SkippedHandleCount: > 0 } partial)
+                StatusText = $"发现 {locks.Count} 个占用句柄；跳过 {partial.SkippedHandleCount} 个查询超时的句柄，结果可能不完整。";
         }
         catch (OperationCanceledException)
         {

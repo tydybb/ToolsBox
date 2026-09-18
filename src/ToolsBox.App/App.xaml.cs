@@ -13,6 +13,17 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         base.OnStartup(e);
 
+        if (e.Args.Length == 1 && e.Args[0] == "--file-path-worker")
+        {
+            try
+            {
+                await Task.Run(FilePathQueryWorker.Run);
+                Shutdown(0);
+            }
+            catch { Shutdown(1); }
+            return;
+        }
+
         if (e.Args.Length == 3 && string.Equals(e.Args[0], "--elevated-network", StringComparison.Ordinal))
         {
             int exitCode;

@@ -8,8 +8,12 @@ namespace ToolsBox.Windows.FileUnlocking;
 
 internal sealed class SystemHandleScanner
 {
-    public IReadOnlyList<FileLockEntry> Scan(FileLockTarget target, CancellationToken cancellationToken)
+    public IReadOnlyList<FileLockEntry> Scan(FileLockTarget target, CancellationToken cancellationToken, string? workerExecutable = null)
     {
+        using var reference = FileHandleNativeMethods.CreateFile("NUL", 0, 7, IntPtr.Zero, 3, 0, IntPtr.Zero);
+        if (reference.IsInvalid) throw new Win32Exception();
+        using var resolver = new FilePathQueryClient(workerExecutable ?? Environment.ProcessPath
+            ?? throw new InvalidOperationException("无法确定扫描辅助程序路径。"));
         IntPtr buffer = QueryHandleTable(out long handleCount);
         var processHandles = new Dictionary<int, IntPtr>();
         var results = new List<FileLockEntry>();
@@ -17,10 +21,24 @@ internal sealed class SystemHandleScanner
         {
             int entrySize = Marshal.SizeOf<FileHandleNativeMethods.SystemHandleTableEntryInfoEx>();
             IntPtr entryPointer = buffer + IntPtr.Size * 2;
+            ushort fileTypeIndex = 0;
+            for (long index = 0; index < handleCount; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var entry = Marshal.PtrToStructure<FileHandleNativeMethods.SystemHandleTableEntryInfoEx>(entryPointer + checked((int)(index * entrySize)));
+                if (entry.UniqueProcessId.ToUInt64() == (ulong)Environment.ProcessId &&
+                    entry.HandleValue.ToUInt64() == (ulong)reference.DangerousGetHandle().ToInt64())
+                {
+                    fileTypeIndex = entry.ObjectTypeIndex;
+                    break;
+                }
+            }
+            if (fileTypeIndex == 0) throw new InvalidOperationException("无法识别系统文件句柄类型，请重试扫描。");
             for (long index = 0; index < handleCount; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var nativeEntry = Marshal.PtrToStructure<FileHandleNativeMethods.SystemHandleTableEntryInfoEx>(entryPointer + checked((int)(index * entrySize)));
+                if (nativeEntry.ObjectTypeIndex != fileTypeIndex) continue;
                 int processId = unchecked((int)nativeEntry.UniqueProcessId.ToUInt64());
                 if (processId <= 0 || !TryGetProcessHandle(processId, processHandles, out IntPtr processHandle))
                 {
@@ -34,7 +52,7 @@ internal sealed class SystemHandleScanner
 
                 try
                 {
-                    string? path = TryGetPath(duplicate);
+                    string? path = resolver.GetPath(duplicate, cancellationToken);
                     if (path is null || !FileLockPathMatcher.Matches(target, path))
                     {
                         continue;
@@ -61,11 +79,11 @@ internal sealed class SystemHandleScanner
             Marshal.FreeHGlobal(buffer);
         }
 
-        return results
+        return new FileLockScanResult(results
             .DistinctBy(item => (item.ProcessId, item.HandleValue))
             .OrderBy(item => item.ProcessName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.LockedPath, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+            .ToArray(), resolver.SkippedHandleCount);
     }
 
     internal static string? TryGetPath(IntPtr handle)

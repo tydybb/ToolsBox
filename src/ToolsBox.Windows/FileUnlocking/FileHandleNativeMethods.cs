@@ -1,10 +1,13 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Win32.SafeHandles;
 
 namespace ToolsBox.Windows.FileUnlocking;
 
 internal static class FileHandleNativeMethods
 {
+    [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint creation, uint flags, IntPtr template);
     internal const int SystemExtendedHandleInformation = 64;
     internal const int StatusInfoLengthMismatch = unchecked((int)0xC0000004);
     internal const uint ProcessDuplicateHandle = 0x0040;
