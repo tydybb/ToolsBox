@@ -54,6 +54,14 @@ dotnet test .\ToolsBox.slnx --configuration Release
 dotnet build .\ToolsBox.slnx --configuration Release --no-restore
 ```
 
+网络辅助进程的实际运行验证需单独执行（Windows，可能显示 UAC 提示）：
+
+```powershell
+dotnet run --project .\tests\ToolsBox.NetworkSmoke --configuration Release -- "E:\work\ToolsBox\src\ToolsBox.App\bin\Release\net8.0-windows\宝哥工具箱.exe"
+```
+
+请将最后的路径替换为实际构建的程序路径。该验证检查辅助进程不打开主窗口、两轮 ETW 回环 UDP 流量采集与停止重启、读取 QoS 规则以及正常退出；不会新增或修改限速规则。日常单元测试不会自动触发 UAC。
+
 ## 项目结构
 
 - `src/ToolsBox.Core`：端口领域模型、筛选和刷新协调。

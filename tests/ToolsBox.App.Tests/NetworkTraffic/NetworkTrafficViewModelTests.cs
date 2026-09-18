@@ -10,6 +10,31 @@ public sealed class NetworkTrafficViewModelTests
     private static readonly DateTimeOffset StartedAt = new(2026, 9, 17, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public Task AsyncStartup_UpdatesCommandsAndPropertiesOnWpfDispatcher() =>
+        WpfTestThread.RunAsync(async () =>
+        {
+            var dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+            var startup = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var source = new FakeTrafficSource { Startup = startup.Task };
+            using var vm = new NetworkTrafficViewModel(source, new FakeLimitService(), CreateSingleMetadata(),
+                new TestNetworkTrafficClock(StartedAt), new WpfNetworkTrafficDispatcher(dispatcher));
+            int offThreadNotifications = 0;
+            vm.PropertyChanged += (_, _) => { if (!dispatcher.CheckAccess()) Interlocked.Increment(ref offThreadNotifications); };
+            vm.StartCommand.CanExecuteChanged += (_, _) => { if (!dispatcher.CheckAccess()) Interlocked.Increment(ref offThreadNotifications); };
+            vm.StopCommand.CanExecuteChanged += (_, _) => { if (!dispatcher.CheckAccess()) Interlocked.Increment(ref offThreadNotifications); };
+
+            Task start = vm.StartAsync();
+            startup.SetResult();
+            await start;
+            Assert.True(vm.IsMonitoring);
+            Assert.False(vm.StartCommand.CanExecute(null));
+            Assert.True(vm.StopCommand.CanExecute(null));
+            await vm.StopAsync();
+            Assert.False(vm.IsMonitoring);
+            Assert.Equal(0, offThreadNotifications);
+        });
+
+    [Fact]
     public async Task StartAndTick_PublishesSortedApplicationRows()
     {
         var source = new FakeTrafficSource();
@@ -193,13 +218,14 @@ public sealed class NetworkTrafficViewModelTests
         public int StopCount { get; private set; }
         public int DeliveredCount => Volatile.Read(ref _deliveredCount);
         public Exception? StartError { get; init; }
+        public Task Startup { get; init; } = Task.CompletedTask;
         public long DroppedEventCount => 0;
 
         public Task StartAsync(CancellationToken cancellationToken = default)
         {
             StartCount++;
             if (StartError is not null) throw StartError;
-            return Task.CompletedTask;
+            return Startup;
         }
 
         public async IAsyncEnumerable<NetworkTrafficDelta> ReadAllAsync(

@@ -20,7 +20,7 @@ public sealed class NetworkTrafficViewModel : ObservableObject, IDisposable
     private string _searchText = string.Empty;
     private bool _showActiveOnly;
     private bool _isMonitoring;
-    private string _statusText = "点击“开始监控”并通过管理员授权";
+    private string _statusText = "点击“开始监控”查看软件网络流量";
     private string _lastSampleText = "尚未采样";
     private bool _hasDroppedEvents;
     private bool _disposed;
@@ -106,11 +106,15 @@ public sealed class NetworkTrafficViewModel : ObservableObject, IDisposable
         CancellationToken token = _sessionCancellation.Token;
         _aggregator.BeginSession(_clock.UtcNow);
         _latestSnapshot = [];
-        await _dispatcher.InvokeAsync(() => Items.Clear()).ConfigureAwait(false);
-        StatusText = "正在等待管理员授权…";
+        await _dispatcher.InvokeAsync(() =>
+        {
+            Items.Clear();
+            StatusText = "正在启动网络监控…";
+        }).ConfigureAwait(false);
         try
         {
             await _source.StartAsync(token).ConfigureAwait(false);
+            string status = "正在监控；当前仅支持上传限速";
             try
             {
                 _rules = await _limitService.GetRulesAsync(token).ConfigureAwait(false);
@@ -118,14 +122,14 @@ public sealed class NetworkTrafficViewModel : ObservableObject, IDisposable
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 _rules = [];
-                StatusText = $"监控已启动，读取限速规则失败：{exception.Message}";
+                status = $"监控已启动，读取限速规则失败：{exception.Message}";
             }
 
-            IsMonitoring = true;
-            if (!StatusText.StartsWith("监控已启动，", StringComparison.Ordinal))
+            await _dispatcher.InvokeAsync(() =>
             {
-                StatusText = "正在监控；当前仅支持上传限速";
-            }
+                IsMonitoring = true;
+                StatusText = status;
+            }).ConfigureAwait(false);
 
             _readerTask = ReadTrafficAsync(token);
             _sampleTask = SampleAsync(token);
@@ -133,13 +137,19 @@ public sealed class NetworkTrafficViewModel : ObservableObject, IDisposable
         }
         catch (OperationCanceledException exception) when (!token.IsCancellationRequested)
         {
-            StatusText = exception.Message;
-            IsMonitoring = false;
+            await _dispatcher.InvokeAsync(() =>
+            {
+                StatusText = exception.Message;
+                IsMonitoring = false;
+            }).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
-            StatusText = $"启动失败：{exception.Message}";
-            IsMonitoring = false;
+            await _dispatcher.InvokeAsync(() =>
+            {
+                StatusText = $"启动失败：{exception.Message}";
+                IsMonitoring = false;
+            }).ConfigureAwait(false);
         }
     }
 
@@ -150,7 +160,7 @@ public sealed class NetworkTrafficViewModel : ObservableObject, IDisposable
             return;
         }
 
-        IsMonitoring = false;
+        await _dispatcher.InvokeAsync(() => IsMonitoring = false).ConfigureAwait(false);
         _sessionCancellation?.Cancel();
         try
         {
@@ -158,7 +168,7 @@ public sealed class NetworkTrafficViewModel : ObservableObject, IDisposable
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            StatusText = $"停止监控时发生错误：{exception.Message}";
+            await _dispatcher.InvokeAsync(() => StatusText = $"停止监控时发生错误：{exception.Message}").ConfigureAwait(false);
         }
 
         await AwaitLoopTasksAsync().ConfigureAwait(false);

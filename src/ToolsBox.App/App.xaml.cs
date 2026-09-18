@@ -9,6 +9,10 @@ public partial class App : Application
 {
     protected override async void OnStartup(StartupEventArgs e)
     {
+        // Helpers share this executable but must remain headless across awaits.
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        base.OnStartup(e);
+
         if (e.Args.Length == 3 && string.Equals(e.Args[0], "--elevated-network", StringComparison.Ordinal))
         {
             int exitCode;
@@ -41,6 +45,14 @@ public partial class App : Application
             return;
         }
 
-        base.OnStartup(e);
+        if (e.Args.Length > 0 && e.Args[0].StartsWith("--elevated-", StringComparison.Ordinal))
+        {
+            Shutdown(1);
+            return;
+        }
+
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
+        MainWindow = new MainWindow();
+        MainWindow.Show();
     }
 }

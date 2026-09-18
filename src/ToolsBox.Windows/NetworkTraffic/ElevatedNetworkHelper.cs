@@ -157,7 +157,7 @@ public static class ElevatedNetworkHelper
         return 0;
     }
 
-    private static async Task RunTrafficPumpAsync(
+    internal static async Task RunTrafficPumpAsync(
         INetworkTrafficSource source,
         ChannelWriter<NetworkHelperMessage> writer,
         CancellationToken cancellationToken)
@@ -165,11 +165,11 @@ public static class ElevatedNetworkHelper
         var batch = new List<NetworkTrafficDelta>(TrafficBatchSize);
         await using IAsyncEnumerator<NetworkTrafficDelta> enumerator = source.ReadAllAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
         Task<bool> moveNext = enumerator.MoveNextAsync().AsTask();
+        Task delay = Task.Delay(TrafficFlushInterval, cancellationToken);
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                Task delay = Task.Delay(TrafficFlushInterval, cancellationToken);
                 Task completed = await Task.WhenAny(moveNext, delay).ConfigureAwait(false);
                 if (completed == moveNext)
                 {
@@ -180,7 +180,7 @@ public static class ElevatedNetworkHelper
 
                     batch.Add(enumerator.Current);
                     moveNext = enumerator.MoveNextAsync().AsTask();
-                    if (batch.Count < TrafficBatchSize)
+                    if (batch.Count < TrafficBatchSize && !delay.IsCompleted)
                     {
                         continue;
                     }
@@ -197,10 +197,24 @@ public static class ElevatedNetworkHelper
                             new NetworkTrafficBatchPayload(deltas, source.DroppedEventCount)),
                         cancellationToken).ConfigureAwait(false);
                 }
+
+                // Keep a fixed flush deadline; individual events must not postpone it.
+                delay = Task.Delay(TrafficFlushInterval, cancellationToken);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+        }
+        finally
+        {
+            // Async iterators cannot be disposed while MoveNextAsync is still running.
+            try
+            {
+                await moveNext.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+            }
         }
     }
 

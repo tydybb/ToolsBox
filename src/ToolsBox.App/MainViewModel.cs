@@ -33,8 +33,20 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public object CurrentTool
     {
         get => _currentTool;
-        private set => SetProperty(ref _currentTool, value);
+        private set
+        {
+            if (SetProperty(ref _currentTool, value))
+            {
+                OnPropertyChanged(nameof(IsPortMonitorSelected));
+                OnPropertyChanged(nameof(IsFileUnlockerSelected));
+                OnPropertyChanged(nameof(IsNetworkTrafficSelected));
+            }
+        }
     }
+
+    public bool IsPortMonitorSelected => ReferenceEquals(CurrentTool, PortMonitor);
+    public bool IsFileUnlockerSelected => ReferenceEquals(CurrentTool, FileUnlocker);
+    public bool IsNetworkTrafficSelected => ReferenceEquals(CurrentTool, NetworkTraffic);
 
     public Task InitializeAsync() => PortMonitor.InitializeAsync();
 
