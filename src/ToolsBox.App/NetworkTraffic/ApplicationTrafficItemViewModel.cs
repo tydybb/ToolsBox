@@ -59,19 +59,22 @@ public sealed class ApplicationTrafficItemViewModel : ObservableObject
     private void RebuildProcesses(IReadOnlyList<ProcessTrafficSnapshot> snapshots)
     {
         Dictionary<ProcessIdentity, ProcessTrafficItemViewModel> existing = Processes.ToDictionary(item => item.Identity);
-        Processes.Clear();
+        var identities = snapshots.Select(item => item.Identity).ToHashSet();
+        for (int i = Processes.Count - 1; i >= 0; i--)
+        {
+            if (!identities.Contains(Processes[i].Identity)) Processes.RemoveAt(i);
+        }
         foreach (ProcessTrafficSnapshot snapshot in snapshots)
         {
             if (!existing.TryGetValue(snapshot.Identity, out ProcessTrafficItemViewModel? item))
             {
                 item = new ProcessTrafficItemViewModel(snapshot);
+                Processes.Add(item);
             }
             else
             {
                 item.Update(snapshot);
             }
-
-            Processes.Add(item);
         }
     }
 }

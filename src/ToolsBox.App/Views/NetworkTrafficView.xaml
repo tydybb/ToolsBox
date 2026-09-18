@@ -12,7 +12,7 @@
 
         <StackPanel>
             <TextBlock Text="网络流量" FontSize="28" FontWeight="SemiBold" Foreground="#1F2933"/>
-            <TextBlock Text="按软件和进程实时查看上传、下载流量，并设置持久化上传限速" Foreground="#637381" Margin="0,5,0,0"/>
+            <TextBlock Text="实时更新流量，已有软件保持原位，新软件追加到底部；支持持久化上传限速" Foreground="#637381" Margin="0,5,0,0"/>
         </StackPanel>
 
         <Grid Grid.Row="1" Margin="0,22,0,14">

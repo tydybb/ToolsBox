@@ -1,14 +1,12 @@
-using System.Collections.Concurrent;
-using System.ComponentModel;
-using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
 using ToolsBox.Core.NetworkTraffic;
 
 namespace ToolsBox.Windows.NetworkTraffic;
 
 public sealed class WindowsProcessMetadataProvider : IProcessMetadataProvider
 {
-    private readonly ConcurrentDictionary<ProcessIdentity, ProcessMetadata> _cache = new();
-
     public ValueTask<ProcessMetadata> GetAsync(
         int processId,
         DateTimeOffset? knownStartTime,
@@ -16,75 +14,76 @@ public sealed class WindowsProcessMetadataProvider : IProcessMetadataProvider
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (knownStartTime.HasValue &&
-            _cache.TryGetValue(new ProcessIdentity(processId, knownStartTime.Value), out ProcessMetadata? cached))
-        {
-            return ValueTask.FromResult(cached);
-        }
-
-        ProcessMetadata metadata = ReadMetadata(processId, knownStartTime);
-        if (metadata.IsAccessible)
-        {
-            _cache[metadata.Identity] = metadata;
-        }
-
-        return ValueTask.FromResult(metadata);
+        return ValueTask.FromResult(ReadMetadata(processId, knownStartTime));
     }
 
     private static ProcessMetadata ReadMetadata(int processId, DateTimeOffset? knownStartTime)
     {
-        try
-        {
-            using Process process = Process.GetProcessById(processId);
-            string processName = SafeReadReference(() => process.ProcessName) ?? $"PID {processId}";
-            DateTimeOffset startedAt = knownStartTime ??
-                                       SafeReadValue(() => new DateTimeOffset(process.StartTime).ToUniversalTime()) ??
-                                       DateTimeOffset.MinValue;
-            string? path = SafeReadReference(() => process.MainModule?.FileName);
-            bool hasExited = SafeReadValue(() => process.HasExited) ?? false;
+        if (processId < 0) return Unavailable(processId, knownStartTime, hasExited: true);
 
-            return new ProcessMetadata(
-                new ProcessIdentity(processId, startedAt),
-                processName,
-                path,
-                !string.IsNullOrWhiteSpace(path),
-                hasExited);
-        }
-        catch (Exception exception) when (IsExpectedProcessFailure(exception))
+        // Module enumeration requests more access than we need and throws for protected
+        // processes. Expected access/exit races are normal return codes on this path.
+        using SafeProcessHandle process = OpenProcess(0x1000 /* PROCESS_QUERY_LIMITED_INFORMATION */, false, processId);
+        if (process.IsInvalid)
         {
-            return new ProcessMetadata(
-                new ProcessIdentity(processId, knownStartTime ?? DateTimeOffset.MinValue),
-                $"PID {processId}",
-                null,
-                false,
-                true);
+            int error = Marshal.GetLastWin32Error();
+            return Unavailable(processId, knownStartTime, hasExited: processId != 0 && error == 87);
         }
+
+        DateTimeOffset startedAt = knownStartTime ?? DateTimeOffset.MinValue;
+        if (GetProcessTimes(process, out long creationTime, out _, out _, out _))
+        {
+            startedAt = new DateTimeOffset(DateTime.FromFileTimeUtc(creationTime));
+            // Do not assign a reused PID's executable to an earlier process's traffic.
+            if (knownStartTime.HasValue && knownStartTime.Value != startedAt)
+                return Unavailable(processId, knownStartTime, hasExited: true);
+        }
+
+        string? path = ReadImagePath(process);
+        bool hasExited = GetExitCodeProcess(process, out uint exitCode) && exitCode != 259 /* STILL_ACTIVE */;
+        return new ProcessMetadata(
+            new ProcessIdentity(processId, startedAt),
+            path is null ? FallbackName(processId) : Path.GetFileNameWithoutExtension(path),
+            path,
+            path is not null,
+            hasExited);
     }
 
-    private static T? SafeReadReference<T>(Func<T?> read) where T : class
+    private static string? ReadImagePath(SafeProcessHandle process)
     {
-        try
-        {
-            return read();
-        }
-        catch (Exception exception) when (IsExpectedProcessFailure(exception))
-        {
-            return default;
-        }
+        var buffer = new StringBuilder(1024);
+        int length = buffer.Capacity;
+        if (QueryFullProcessImageName(process, 0, buffer, ref length)) return buffer.ToString();
+        if (Marshal.GetLastWin32Error() != 122 /* ERROR_INSUFFICIENT_BUFFER */) return null;
+
+        buffer.EnsureCapacity(32768);
+        length = buffer.Capacity;
+        return QueryFullProcessImageName(process, 0, buffer, ref length) ? buffer.ToString() : null;
     }
 
-    private static T? SafeReadValue<T>(Func<T> read) where T : struct
+    private static ProcessMetadata Unavailable(int processId, DateTimeOffset? startedAt, bool hasExited) =>
+        new(new ProcessIdentity(processId, startedAt ?? DateTimeOffset.MinValue),
+            FallbackName(processId), null, false, hasExited);
+
+    private static string FallbackName(int processId) => processId switch
     {
-        try
-        {
-            return read();
-        }
-        catch (Exception exception) when (IsExpectedProcessFailure(exception))
-        {
-            return null;
-        }
-    }
+        0 => "System Idle Process",
+        4 => "System",
+        _ => $"PID {processId}"
+    };
 
-    private static bool IsExpectedProcessFailure(Exception exception) =>
-        exception is ArgumentException or InvalidOperationException or Win32Exception or NotSupportedException;
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern SafeProcessHandle OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inheritHandle, int processId);
+
+    [DllImport("kernel32.dll", EntryPoint = "QueryFullProcessImageNameW", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool QueryFullProcessImageName(SafeProcessHandle process, uint flags, StringBuilder path, ref int size);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetProcessTimes(SafeProcessHandle process, out long creation, out long exit, out long kernel, out long user);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetExitCodeProcess(SafeProcessHandle process, out uint exitCode);
 }

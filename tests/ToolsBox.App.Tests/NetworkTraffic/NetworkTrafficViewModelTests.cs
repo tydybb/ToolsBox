@@ -10,6 +10,62 @@ public sealed class NetworkTrafficViewModelTests
     private static readonly DateTimeOffset StartedAt = new(2026, 9, 17, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public Task Ticks_KeepRowsSelectionAndDetailsStableWhenRatesChange() =>
+        WpfTestThread.RunAsync(async () =>
+        {
+            var source = new FakeTrafficSource();
+            var clock = new TestNetworkTrafficClock(StartedAt);
+            var metadata = new FakeMetadataProvider(
+                new ProcessMetadata(new ProcessIdentity(10, StartedAt), "Slow", @"C:\Slow.exe", true, false),
+                new ProcessMetadata(new ProcessIdentity(20, StartedAt), "Fast", @"C:\Fast.exe", true, false),
+                new ProcessMetadata(new ProcessIdentity(30, StartedAt), "New", @"C:\New.exe", true, false));
+            using var vm = new NetworkTrafficViewModel(source, new FakeLimitService(), metadata, clock,
+                new WpfNetworkTrafficDispatcher(System.Windows.Threading.Dispatcher.CurrentDispatcher));
+            await vm.StartAsync();
+            source.Publish(new(10, StartedAt, NetworkTrafficDirection.Upload, 100, StartedAt),
+                new(20, StartedAt, NetworkTrafficDirection.Upload, 500, StartedAt));
+            await WaitUntilAsync(() => source.DeliveredCount == 2);
+            clock.Tick(StartedAt.AddSeconds(1));
+            await WaitUntilAsync(() => vm.Items.Count == 2);
+            var fast = vm.Items[0];
+            var slow = vm.Items[1];
+            slow.IsExpanded = true;
+            var process = slow.Processes[0];
+            var grid = new System.Windows.Controls.DataGrid { ItemsSource = vm.Items, SelectedItem = slow };
+            int rowChanges = 0, processChanges = 0;
+            vm.Items.CollectionChanged += (_, _) => rowChanges++;
+            slow.Processes.CollectionChanged += (_, _) => processChanges++;
+
+            source.Publish(new(10, StartedAt, NetworkTrafficDirection.Upload, 1000, StartedAt.AddSeconds(1)),
+                new(20, StartedAt, NetworkTrafficDirection.Upload, 50, StartedAt.AddSeconds(1)));
+            await WaitUntilAsync(() => source.DeliveredCount == 4);
+            clock.Tick(StartedAt.AddSeconds(2));
+            await WaitUntilAsync(() => slow.UploadBytesPerSecond == 1000);
+
+            Assert.Same(fast, vm.Items[0]);
+            Assert.Same(slow, vm.Items[1]);
+            Assert.Same(slow, grid.SelectedItem);
+            Assert.True(slow.IsExpanded);
+            Assert.Same(process, slow.Processes[0]);
+            Assert.Equal(1000, process.UploadBytesPerSecond);
+            Assert.Equal(0, rowChanges);
+            Assert.Equal(0, processChanges);
+
+            source.Publish(new NetworkTrafficDelta(30, StartedAt, NetworkTrafficDirection.Upload, 9999, StartedAt.AddSeconds(2)));
+            await WaitUntilAsync(() => source.DeliveredCount == 5);
+            clock.Tick(StartedAt.AddSeconds(3));
+            await WaitUntilAsync(() => vm.Items.Count == 3);
+            Assert.Same(fast, vm.Items[0]);
+            Assert.Same(slow, vm.Items[1]);
+            Assert.Equal("New", vm.Items[2].ApplicationName);
+            Assert.Same(slow, grid.SelectedItem);
+            vm.SearchText = "Slow";
+            Assert.Same(slow, Assert.Single(vm.Items));
+            Assert.Same(slow, grid.SelectedItem);
+            await vm.StopAsync();
+        });
+
+    [Fact]
     public Task AsyncStartup_UpdatesCommandsAndPropertiesOnWpfDispatcher() =>
         WpfTestThread.RunAsync(async () =>
         {

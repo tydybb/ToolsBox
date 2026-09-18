@@ -290,20 +290,25 @@ public sealed class NetworkTrafficViewModel : ObservableObject, IDisposable
         Dictionary<string, ApplicationTrafficItemViewModel> existing = Items.ToDictionary(
             item => item.Key,
             StringComparer.OrdinalIgnoreCase);
-        Items.Clear();
+        var visibleKeys = filtered.Select(item => item.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        for (int i = Items.Count - 1; i >= 0; i--)
+        {
+            if (!visibleKeys.Contains(Items[i].Key)) Items.RemoveAt(i);
+        }
+
+        // Preserve row positions, selection and details while updating live rates.
         foreach (ApplicationTrafficSnapshot snapshot in filtered)
         {
             BandwidthLimitRule? rule = FindRule(snapshot.ExecutablePath);
             if (!existing.TryGetValue(snapshot.Key, out ApplicationTrafficItemViewModel? item))
             {
                 item = new ApplicationTrafficItemViewModel(snapshot, rule);
+                Items.Add(item);
             }
             else
             {
                 item.Update(snapshot, rule);
             }
-
-            Items.Add(item);
         }
     }
 

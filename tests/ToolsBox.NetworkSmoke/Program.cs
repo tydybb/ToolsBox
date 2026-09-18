@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.ComponentModel;
+using System.Runtime.ExceptionServices;
 using System.IO.Pipes;
 using System.Net;
 using System.Net.Sockets;
@@ -10,6 +12,32 @@ using ToolsBox.Windows.NetworkTraffic;
 // exchanges loopback UDP traffic, and reads QoS rules without changing any policies.
 if (args.Length != 1 || !File.Exists(args[0]))
     throw new ArgumentException("Pass the full path to the built toolbox executable.");
+
+// Exercise metadata queries for actual running processes, including protected ones.
+int metadataExceptions = 0, metadataCount = 0;
+void CountMetadataException(object? sender, FirstChanceExceptionEventArgs e)
+{
+    if (e.Exception is Win32Exception) Interlocked.Increment(ref metadataExceptions);
+}
+var metadataProvider = new WindowsProcessMetadataProvider();
+AppDomain.CurrentDomain.FirstChanceException += CountMetadataException;
+try
+{
+    foreach (Process process in Process.GetProcesses())
+    {
+        using (process)
+        {
+            _ = await metadataProvider.GetAsync(process.Id, null);
+            metadataCount++;
+        }
+    }
+}
+finally
+{
+    AppDomain.CurrentDomain.FirstChanceException -= CountMetadataException;
+}
+if (metadataExceptions != 0) throw new InvalidOperationException($"Metadata threw {metadataExceptions} first-chance Win32 exceptions.");
+Console.WriteLine($"PASS: queried {metadataCount} process identities, no first-chance Win32 exceptions.");
 
 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 CancellationToken token = timeout.Token;
