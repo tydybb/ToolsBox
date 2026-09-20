@@ -2,7 +2,7 @@ using ToolsBox.App.FileUnlocking;
 using ToolsBox.App.Infrastructure;
 using ToolsBox.App.NetworkTraffic;
 using ToolsBox.App.Ports;
-using ToolsBox.App.ArchiveRecovery;
+using ToolsBox.App.WorkCountdown;
 
 namespace ToolsBox.App;
 
@@ -13,24 +13,25 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public MainViewModel(
         PortMonitorViewModel portMonitor,
         FileUnlockerViewModel fileUnlocker,
-        NetworkTrafficViewModel networkTraffic)
+        NetworkTrafficViewModel networkTraffic,
+        WorkCountdownViewModel? workCountdown = null)
     {
         PortMonitor = portMonitor;
         FileUnlocker = fileUnlocker;
         NetworkTraffic = networkTraffic;
-        ArchiveRecovery = new ArchiveRecoveryViewModel();
+        WorkCountdown = workCountdown ?? new WorkCountdownViewModel();
         _currentTool = PortMonitor;
         ShowPortMonitorCommand = new RelayCommand(() => CurrentTool = PortMonitor);
         ShowFileUnlockerCommand = new RelayCommand(() => CurrentTool = FileUnlocker);
         ShowNetworkTrafficCommand = new RelayCommand(() => CurrentTool = NetworkTraffic);
-        ShowArchiveRecoveryCommand = new RelayCommand(() => CurrentTool = ArchiveRecovery);
+        ShowWorkCountdownCommand = new RelayCommand(() => CurrentTool = WorkCountdown);
     }
 
     public PortMonitorViewModel PortMonitor { get; }
     public FileUnlockerViewModel FileUnlocker { get; }
     public NetworkTrafficViewModel NetworkTraffic { get; }
-    public ArchiveRecoveryViewModel ArchiveRecovery { get; }
-    public RelayCommand ShowArchiveRecoveryCommand { get; }
+    public WorkCountdownViewModel WorkCountdown { get; }
+    public RelayCommand ShowWorkCountdownCommand { get; }
     public RelayCommand ShowPortMonitorCommand { get; }
     public RelayCommand ShowFileUnlockerCommand { get; }
     public RelayCommand ShowNetworkTrafficCommand { get; }
@@ -45,7 +46,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(IsPortMonitorSelected));
                 OnPropertyChanged(nameof(IsFileUnlockerSelected));
                 OnPropertyChanged(nameof(IsNetworkTrafficSelected));
-                OnPropertyChanged(nameof(IsArchiveRecoverySelected));
+                OnPropertyChanged(nameof(IsWorkCountdownSelected));
             }
         }
     }
@@ -53,7 +54,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool IsPortMonitorSelected => ReferenceEquals(CurrentTool, PortMonitor);
     public bool IsFileUnlockerSelected => ReferenceEquals(CurrentTool, FileUnlocker);
     public bool IsNetworkTrafficSelected => ReferenceEquals(CurrentTool, NetworkTraffic);
-    public bool IsArchiveRecoverySelected => ReferenceEquals(CurrentTool, ArchiveRecovery);
+    public bool IsWorkCountdownSelected => ReferenceEquals(CurrentTool, WorkCountdown);
 
     public Task InitializeAsync() => PortMonitor.InitializeAsync();
 
@@ -62,6 +63,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         PortMonitor.Dispose();
         FileUnlocker.Dispose();
         NetworkTraffic.Dispose();
-        ArchiveRecovery.Dispose();
+        WorkCountdown.Dispose();
     }
 }

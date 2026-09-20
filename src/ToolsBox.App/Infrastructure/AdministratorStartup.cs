@@ -5,7 +5,7 @@ namespace ToolsBox.App.Infrastructure;
 
 public static class AdministratorStartup
 {
-    // The executable also hosts the restricted archive worker. Elevate only the main UI path.
+    // Require administrator rights before opening the main UI, including dotnet-hosted startup.
     public static bool EnsureAdministrator(bool isAdministrator, Action<ProcessStartInfo> launch, string executable, string? entryAssembly)
     {
         if (isAdministrator) return true;

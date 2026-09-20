@@ -5,7 +5,6 @@
     <Project Path="src/ToolsBox.Windows/ToolsBox.Windows.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/ToolsBox.ArchiveSmoke/ToolsBox.ArchiveSmoke.csproj" />
     <Project Path="tests/ToolsBox.App.Tests/ToolsBox.App.Tests.csproj" />
     <Project Path="tests/ToolsBox.Core.Tests/ToolsBox.Core.Tests.csproj" />
     <Project Path="tests/ToolsBox.Windows.Tests/ToolsBox.Windows.Tests.csproj" />

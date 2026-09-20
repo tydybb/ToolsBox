@@ -51,14 +51,14 @@ public partial class FileUnlockerView : UserControl
     private async void OnTerminateProcesses(object sender, RoutedEventArgs e)
     {
         if (!ViewModel.CanActOnSelectedEntries) return;
-        if (MessageBox.Show($"已选 {ViewModel.SelectedCount} 条占用记录，将结束涉及的 {ViewModel.SelectedProcessCount} 个进程，进程中未保存的数据会丢失。是否继续？", "确认结束进程",
-                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+        bool cancelled = false;
+        string summary = await ViewModel.TerminateSelectedProcessesAsync(targets =>
         {
-            return;
-        }
-
-        string summary = await ViewModel.TerminateSelectedProcessesAsync();
-        MessageBox.Show(summary, "操作结果", MessageBoxButton.OK, MessageBoxImage.Information);
+            var dialog = new ProcessTerminationDialog(ViewModel.PathText, targets) { Owner = Window.GetWindow(this) };
+            cancelled = dialog.ShowDialog() != true;
+            return !cancelled;
+        });
+        if (!cancelled) MessageBox.Show(summary, "操作结果", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private async void OnCloseHandles(object sender, RoutedEventArgs e)

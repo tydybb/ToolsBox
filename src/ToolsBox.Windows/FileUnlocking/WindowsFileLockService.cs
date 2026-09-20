@@ -217,32 +217,43 @@ public sealed class WindowsFileLockService : IFileLockService
         }
     }
 
-    private static FileUnlockResult TerminateProcess(FileLockEntry entry)
+    private static FileUnlockResult TerminateProcess(FileLockEntry entry) =>
+        TerminateProcess(entry, pid => new FileUnlockProcess(Process.GetProcessById(pid)));
+
+    internal static FileUnlockResult TerminateProcess(FileLockEntry entry, Func<int, IFileUnlockProcess> openProcess)
     {
         if (!FileUnlockSafetyPolicy.CanOperate(entry, Environment.ProcessId, out string reason))
         {
             return FileUnlockResult.Failure(reason);
         }
 
-        if (!TryValidateProcess(entry, out Process? process, out reason))
+        try
         {
-            return FileUnlockResult.Failure(reason);
-        }
+            using IFileUnlockProcess process = openProcess(entry.ProcessId);
+            if (process.HasExited)
+            {
+                return FileUnlockResult.Failure("占用进程已退出，请重新扫描。");
+            }
+            if (process.Id != entry.ProcessId ||
+                process.StartTime.ToUniversalTime() != entry.ProcessStartedAt!.Value.UtcDateTime)
+            {
+                return FileUnlockResult.Failure("原进程已退出，PID 已被其他进程复用。");
+            }
+            if (!FileUnlockSafetyPolicy.CanOperate(entry with { ProcessName = process.ProcessName },
+                    Environment.ProcessId, out reason))
+            {
+                return FileUnlockResult.Failure(reason);
+            }
 
-        using (Process validatedProcess = process!)
+            // Never terminate descendants: a lock belongs to this one validated process.
+            process.Kill(entireProcessTree: false);
+            return process.WaitForExit(5000)
+                ? FileUnlockResult.Success($"已结束进程 {entry.ProcessName} ({entry.ProcessId})。")
+                : FileUnlockResult.Failure($"进程 {entry.ProcessName} 未在限定时间内退出。" );
+        }
+        catch (Exception exception) when (exception is ArgumentException or Win32Exception or InvalidOperationException or NotSupportedException)
         {
-            try
-            {
-                validatedProcess.Kill(true);
-                validatedProcess.WaitForExit(5000);
-                return validatedProcess.HasExited
-                    ? FileUnlockResult.Success($"已结束进程 {entry.ProcessName} ({entry.ProcessId})。")
-                    : FileUnlockResult.Failure($"进程 {entry.ProcessName} 未在限定时间内退出。" );
-            }
-            catch (Exception exception) when (exception is Win32Exception or InvalidOperationException or NotSupportedException)
-            {
-                return FileUnlockResult.Failure(exception.Message);
-            }
+            return FileUnlockResult.Failure(exception.Message);
         }
     }
 

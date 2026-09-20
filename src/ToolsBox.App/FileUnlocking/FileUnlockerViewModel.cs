@@ -39,14 +39,18 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
     public int SelectedProcessCount => _selectedProcessCount;
     public bool CanSelectEntries => !_isDisposed && !IsBusy && Entries.Count > 0;
     public bool CanActOnSelectedEntries => CanSelectEntries && SelectedCount > 0;
+    public bool CanEditPath => !_isDisposed && !IsBusy;
 
     public string PathText
     {
         get => _pathText;
         set
         {
+            if (!CanEditPath) return;
             if (SetProperty(ref _pathText, value))
             {
+                Entries.Clear();
+                StatusText = "路径已变化，请重新检测占用。";
                 ScanCommand.RaiseCanExecuteChanged();
                 ElevatedScanCommand.RaiseCanExecuteChanged();
             }
@@ -69,6 +73,7 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
                 ScanCommand.RaiseCanExecuteChanged();
                 ElevatedScanCommand.RaiseCanExecuteChanged();
                 RefreshSelectionAvailability();
+                OnPropertyChanged(nameof(CanEditPath));
             }
         }
     }
@@ -81,6 +86,7 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
 
     public async Task SetPathAndScanAsync(string path)
     {
+        if (!CanEditPath) return;
         PathText = path;
         await ScanAsync();
     }
@@ -105,6 +111,7 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
 
     private async Task ScanCoreAsync(bool elevated)
     {
+        if (IsBusy || _isDisposed) return;
         _operationCancellation?.Cancel();
         _operationCancellation?.Dispose();
         _operationCancellation = new CancellationTokenSource();
@@ -116,6 +123,7 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
             IReadOnlyList<FileLockEntry> locks = elevated
                 ? await _service.FindLocksElevatedAsync(target, _operationCancellation.Token)
                 : await _service.FindLocksAsync(target, _operationCancellation.Token);
+            if (_isDisposed) return;
             _isUpdatingSelection = true;
             try
             {
@@ -155,16 +163,36 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
         }
     }
 
-    public async Task<string> TerminateSelectedProcessesAsync()
+    public async Task<string> TerminateSelectedProcessesAsync(Func<IReadOnlyList<FileLockEntry>, bool> confirm)
     {
+        ArgumentNullException.ThrowIfNull(confirm);
         if (IsBusy || _isDisposed) return "请等待当前操作完成。";
-        FileLockEntry[] selected = Entries.Where(item => item.IsSelected).DistinctBy(item => item.ProcessId).ToArray();
+        FileLockEntry[] selected = Entries.Where(item => item.IsSelected)
+            .Select(item => item with { }).ToArray();
         if (selected.Length == 0)
         {
             return "请先勾选至少一条占用记录。";
         }
 
-        return await ExecuteActionsAsync(selected, _service.TerminateProcessAsync);
+        var blocked = new List<string>();
+        foreach (FileLockEntry entry in selected)
+            if (!FileUnlockSafetyPolicy.CanOperate(entry, Environment.ProcessId, out string reason))
+                blocked.Add($"{entry.ProcessName} (PID {entry.ProcessId})：{reason}");
+        if (blocked.Count > 0)
+            return StatusText = "已阻止本次操作，请先取消勾选以下受保护或无法验证的进程："
+                + Environment.NewLine + string.Join(Environment.NewLine, blocked);
+        if (selected.GroupBy(item => item.ProcessId).Any(group => group.Select(item => item.ProcessStartedAt).Distinct().Count() > 1))
+            return StatusText = "同一 PID 出现不同的进程身份，为避免误操作请重新扫描。";
+        selected = selected.DistinctBy(item => item.ProcessId).ToArray();
+
+        IsBusy = true;
+        try
+        {
+            if (!confirm(Array.AsReadOnly(selected)) || _isDisposed)
+                return StatusText = "已取消结束进程，未执行任何操作。";
+            return await ExecuteActionsAsync(selected, _service.TerminateProcessAsync);
+        }
+        finally { IsBusy = false; }
     }
 
     public async Task<string> CloseSelectedHandlesAsync()
@@ -190,6 +218,11 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
         {
             foreach (FileLockEntry entry in entries)
             {
+                if (_isDisposed)
+                {
+                    failures.Add("工具页面已关闭，已停止后续操作。");
+                    break;
+                }
                 FileUnlockResult result = await action(entry, CancellationToken.None);
                 if (result.Succeeded)
                 {
@@ -206,7 +239,7 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
             IsBusy = false;
         }
 
-        await ScanAsync();
+        if (!_isDisposed) await ScanAsync();
         string summary = $"成功 {succeeded} 项，失败 {failures.Count} 项。";
         if (failures.Count > 0)
         {
@@ -296,6 +329,7 @@ public sealed class FileUnlockerViewModel : ObservableObject, IDisposable
         foreach (FileLockEntry entry in _observedEntries) entry.PropertyChanged -= OnEntryPropertyChanged;
         _observedEntries.Clear();
         RefreshSelectionAvailability();
+        OnPropertyChanged(nameof(CanEditPath));
         _operationCancellation?.Cancel();
         _operationCancellation?.Dispose();
         _operationCancellation = null;

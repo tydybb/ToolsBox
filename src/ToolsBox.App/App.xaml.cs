@@ -17,15 +17,6 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         base.OnStartup(e);
 
-        if (e.Args.Length > 0 && e.Args[0] == "--archive-worker")
-        {
-            int code = e.Args.Length == 4
-                ? await ToolsBox.Windows.ArchiveRecovery.ArchiveRecoveryWorker.RunAsync(e.Args[1], e.Args[2], e.Args[3])
-                : 1;
-            Shutdown(code);
-            return;
-        }
-
         if (e.Args.Length == 1 && e.Args[0] == "--file-path-worker")
         {
             try

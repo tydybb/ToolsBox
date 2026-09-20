@@ -21,7 +21,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Title>宝哥工具箱</Title>
     <Product>宝哥工具箱</Product>
-    <Description>面向 Windows 的端口监控与文件解锁工具箱</Description>
+    <Description>面向 Windows 的端口监控与文件解除占用工具箱</Description>
   </PropertyGroup>
 
 </Project>

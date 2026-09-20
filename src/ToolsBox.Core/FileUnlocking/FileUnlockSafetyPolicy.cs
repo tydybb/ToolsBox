@@ -4,7 +4,8 @@ public static class FileUnlockSafetyPolicy
 {
     private static readonly HashSet<string> ProtectedNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        "System", "Registry", "smss", "csrss", "wininit", "services", "lsass", "winlogon", "svchost"
+        "System", "Registry", "smss", "csrss", "wininit", "services", "lsass", "winlogon", "svchost",
+        "explorer", "dwm", "sihost", "ShellExperienceHost", "StartMenuExperienceHost"
     };
 
     public static bool CanOperate(FileLockEntry entry, int currentProcessId, out string reason)

@@ -117,14 +117,14 @@ public sealed class FileUnlockerSelectionTests
         using var vm = new FileUnlockerViewModel(service) { PathText = Path.GetTempPath() };
         vm.Entries.Add(Entry(1, 10) with { IsSelected = true });
         vm.Entries.Add(Entry(2, 10) with { IsSelected = true });
-        Task<string> action = terminate ? vm.TerminateSelectedProcessesAsync() : vm.CloseSelectedHandlesAsync();
+        Task<string> action = terminate ? vm.TerminateSelectedProcessesAsync(_ => true) : vm.CloseSelectedHandlesAsync();
         Assert.True(vm.IsBusy);
         Assert.False(vm.CanSelectEntries);
         Assert.False(vm.CanActOnSelectedEntries);
         Assert.False(vm.ToggleSelectAllCommand.CanExecute(null));
         vm.ToggleSelectAllCommand.Execute(null);
         Assert.All(vm.Entries, row => Assert.True(row.IsSelected));
-        await vm.TerminateSelectedProcessesAsync();
+        await vm.TerminateSelectedProcessesAsync(_ => true);
         await vm.CloseSelectedHandlesAsync();
         Assert.Equal(1, service.ActionCalls);
         service.ActionResult.SetResult(FileUnlockResult.Success("ok"));
@@ -146,6 +146,10 @@ public sealed class FileUnlockerSelectionTests
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             CheckBox header = Assert.Single(Descendants(view).OfType<CheckBox>().Where(box => Equals(box.Content, "全选")));
             CheckBox row = Descendants(view).OfType<CheckBox>().First(box => box.DataContext is FileLockEntry);
+            Button[] browse = Descendants(view).OfType<Button>().Where(button => button.Content is "选择文件" or "选择文件夹").ToArray();
+            Assert.Equal(2, browse.Length);
+            Assert.Contains(Descendants(view).OfType<Button>(), button => Equals(button.Content, "强制结束所选进程"));
+            Assert.DoesNotContain(Descendants(view).OfType<Button>(), button => Equals(button.Content, "安全结束所选进程"));
             Assert.True(Descendants(view).OfType<DataGridRow>().Count() < vm.Entries.Count);
             Click(row);
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
@@ -162,6 +166,7 @@ public sealed class FileUnlockerSelectionTests
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             Assert.False(header.IsEnabled);
             Assert.False(row.IsEnabled);
+            Assert.All(browse, button => Assert.False(button.IsEnabled));
             Assert.True(Assert.Single(Descendants(view).OfType<DataGrid>()).IsEnabled);
             service.ScanResult.SetResult([]);
             await scan;
@@ -177,7 +182,7 @@ public sealed class FileUnlockerSelectionTests
         Assert.Equal(processes, vm.SelectedProcessCount);
     }
 
-    private static FileLockEntry Entry(int handle, int pid = 1) => new("held.txt", handle, pid, "holder", "holder.exe", null, false);
+    private static FileLockEntry Entry(int handle, int pid = 1) => new("held.txt", handle, pid, "holder", "holder.exe", new DateTimeOffset(2026, 9, 18, 8, 0, 0, TimeSpan.Zero), false);
 
     private static IEnumerable<DependencyObject> Descendants(DependencyObject parent)
     {

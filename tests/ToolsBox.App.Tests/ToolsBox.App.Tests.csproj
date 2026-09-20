@@ -21,10 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="ArchiveRecovery\Fixtures\*" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\ToolsBox.App\ToolsBox.App.csproj" />
   </ItemGroup>
 

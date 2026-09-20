@@ -1,0 +1,182 @@
+<UserControl x:Class="ToolsBox.App.Views.WorkCountdownView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Background="#F4F6F8">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="28,24,28,24">
+            <TextBlock Text="下班倒计时" FontSize="28" FontWeight="SemiBold" Foreground="#1F2933"/>
+            <TextBlock Text="{Binding DateText}" Foreground="#637381" Margin="0,6,0,18"/>
+
+            <Border Background="White" CornerRadius="8" Padding="20" BorderBrush="#D9E2EC" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="今日计时设置" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,14"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,20,0">
+                            <TextBlock Text="上班时间（最早 07:30）" Margin="0,0,0,6"/>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="使用当前时间" Command="{Binding UseCurrentTimeCommand}"/>
+                                <TextBox x:Name="StartTimeInput" Text="{Binding StartTimeText, UpdateSourceTrigger=PropertyChanged}" MaxLength="5" MinWidth="80" ToolTip="支持半角/全角冒号或四位数字，例如 08:30、08：30、0830"/>
+                            </DockPanel>
+                            <TextBlock Text="支持 08:30 / 08：30 / 0830" Foreground="#637381" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="加班时长（整数小时）" Margin="0,0,0,6"/>
+                            <TextBox x:Name="OvertimeInput" Text="{Binding OvertimeText, UpdateSourceTrigger=PropertyChanged}" MaxLength="10" ToolTip="工作日：0 或至少 2；周末节假日：至少 4"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="{Binding OvertimeHint}" Foreground="#637381" Margin="0,8,0,14"/>
+                    <TextBlock Text="当天类型（公司安排不同时可手动覆盖）" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="DayModeInput" ItemsSource="{Binding DayChoices}" DisplayMemberPath="Label" SelectedValuePath="Mode"
+                              SelectedValue="{Binding DayMode, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="{Binding CalendarText}" Foreground="#246BFD" Margin="0,8,0,14" TextWrapping="Wrap"/>
+                    <WrapPanel>
+                        <Button x:Name="StartCountdownButton" Content="开始 / 重新计算" Command="{Binding StartCommand}" Margin="0"
+                                Background="#246BFD" Foreground="White" BorderBrush="#246BFD"/>
+                        <Button x:Name="FinishWorkButton" Content="下班" Command="{Binding FinishCommand}"
+                                Padding="16,8" Margin="6,0,0,0" BorderThickness="1"
+                                ToolTip="结束本次计时，并记录实际下班时间">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="#16794B"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="BorderBrush" Value="#16794B"/>
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Background" Value="#E4E7EB"/>
+                                            <Setter Property="Foreground" Value="#637381"/>
+                                            <Setter Property="BorderBrush" Value="#CBD2D9"/>
+                                            <Setter Property="Cursor" Value="Arrow"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="重置" Command="{Binding ResetCommand}"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding ErrorMessage}" Foreground="#B42318" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding PendingText}" TextWrapping="Wrap" Foreground="#9A6700" Margin="0,12,0,8"/>
+            <Border Background="#17212B" CornerRadius="8" Padding="24,20">
+                <StackPanel>
+                    <TextBlock x:Name="CountdownStatusText" Text="{Binding StatusText}" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#BCCCDC"/>
+                                <Setter Property="FontSize" Value="15"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsOverdue}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsFinished}" Value="True">
+                                        <Setter Property="Foreground" Value="#91E3BA"/>
+                                        <Setter Property="FontSize" Value="24"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsEarlyDeparture}" Value="True">
+                                        <Setter Property="Foreground" Value="#FFD580"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock x:Name="OverdueNotice" Text="你已无偿加班" Foreground="#FF9E95" FontSize="24" FontWeight="Bold" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsOverdue}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock x:Name="FinishedTimerCaption" Text="{Binding FinishedTimerLabel}" Foreground="#BCCCDC" Margin="0,10,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFinished}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock x:Name="CountdownText" Text="{Binding TimerText}" FontFamily="Consolas" FontSize="54" FontWeight="SemiBold" Margin="0,10,0,10" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="White"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsOverdue}" Value="True">
+                                        <Setter Property="Foreground" Value="#FF9E95"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsFinished}" Value="True">
+                                        <Setter Property="Foreground" Value="#91E3BA"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsEarlyDeparture}" Value="True">
+                                        <Setter Property="Foreground" Value="#FFD580"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock x:Name="FinishDetailsText" Text="{Binding FinishDetails}" Foreground="#BCCCDC" TextWrapping="Wrap" Margin="0,0,0,12">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFinished}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Text="{Binding ActiveTaskText}" Foreground="#BCCCDC" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding AttendanceText}" Foreground="#FFD580" FontSize="16" Margin="0,10,0,0"/>
+                    <StackPanel x:Name="OvertimePanel" Margin="0,16,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasOvertime}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock x:Name="OvertimeDuration" Text="{Binding OvertimeDurationText}" Foreground="#91E3BA" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="OvertimePeriod" Text="{Binding OvertimePeriodText}" Foreground="#BCCCDC" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="OvertimeMessage" Text="{Binding OvertimeMessage}" Foreground="#FFD580" FontSize="15" Margin="0,10,0,0" TextWrapping="Wrap">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFinished}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Grid Margin="0,18,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <TextBlock Text="正常下班" Foreground="#637381" Margin="0,0,0,8"/>
+                <TextBlock Grid.Column="1" Text="{Binding NormalEndText}" FontWeight="SemiBold"/>
+                <TextBlock Grid.Row="1" Text="预计下班" Foreground="#637381" Margin="0,0,0,8"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding EndText}" FontWeight="SemiBold"/>
+                <TextBlock Grid.Row="2" Text="加班扣除休息" Foreground="#637381"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding BreakText}" TextWrapping="Wrap"/>
+            </Grid>
+            <TextBlock Margin="0,20,0,0" Foreground="#637381" TextWrapping="Wrap" LineHeight="22"
+                       Text="工作日 07:30—09:30 上班，9 小时后下班（含午休）；晚于 09:30 标记迟到，正常下班仍为 18:30。&#10;加班跳过 12:00—13:00 和 19:00—19:30，只有实际跨过的休息时段才扣除。倒计时是距离下班的真实时间，吃饭时仍继续倒数。&#10;内置中国大陆 2026 年官方节假日与调休安排，离线可用；其他年份请手动选择日期类型。切换工具继续计时，同日重开可恢复。"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,5 +1,7 @@
 # Archive Password Recovery Implementation Plan
 
+> 历史记录：用户于 2026-09-18 要求移除压缩包密码找回功能，该功能现已撤下。本文的密码找回方案、测试结果和发布路径仅对应旧版；文件解锁全选功能仍保留。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Integrate offline local ZIP/RAR/7z candidate verification using an embedded engine and explicit outcome states, without modifying or extracting the archive.

@@ -8,6 +8,8 @@ using ToolsBox.Windows.NetworkTraffic;
 using System.ComponentModel;
 using System.Windows.Interop;
 using ToolsBox.App.Infrastructure;
+using ToolsBox.App.WorkCountdown;
+using ToolsBox.App.Views;
 
 namespace ToolsBox.App;
 
@@ -15,10 +17,22 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
     private ShellFileDropReceiver? _fileDrops;
+    private readonly Action<WorkCountdownViewModel> _showOffWorkReminder;
+    private readonly Action<WorkCountdownViewModel> _showWorkFinished;
+    private OffWorkReminderWindow? _offWorkReminder;
 
-    public MainWindow()
+    public MainWindow() : this(new WorkCountdownViewModel()) { }
+
+    public MainWindow(WorkCountdownViewModel countdown, Action<WorkCountdownViewModel>? showReminder = null)
+        : this(countdown, showReminder, null) { }
+
+    public MainWindow(WorkCountdownViewModel countdown, Action<WorkCountdownViewModel>? showReminder,
+        Action<WorkCountdownViewModel>? showFinished)
     {
+        ArgumentNullException.ThrowIfNull(countdown);
         InitializeComponent();
+        _showOffWorkReminder = showReminder ?? ShowOffWorkReminder;
+        _showWorkFinished = showFinished ?? ShowWorkFinished;
         var networkClient = new ElevatedNetworkClient();
         _viewModel = new MainViewModel(
             new PortMonitorViewModel(new WindowsPortSnapshotProvider()),
@@ -28,17 +42,46 @@ public partial class MainWindow : Window
                 networkClient,
                 new WindowsProcessMetadataProvider(),
                 new SystemNetworkTrafficClock(),
-                new WpfNetworkTrafficDispatcher(Dispatcher)));
+                new WpfNetworkTrafficDispatcher(Dispatcher)), countdown);
         DataContext = _viewModel;
         SourceInitialized += OnSourceInitialized;
         _viewModel.PropertyChanged += OnDropStateChanged;
         _viewModel.FileUnlocker.PropertyChanged += OnDropStateChanged;
-        _viewModel.ArchiveRecovery.PropertyChanged += OnDropStateChanged;
+        _viewModel.WorkCountdown.OffWorkReached += OnOffWorkReached;
+        _viewModel.WorkCountdown.WorkFinished += OnWorkFinished;
+        _viewModel.WorkCountdown.PropertyChanged += OnCountdownChanged;
         Loaded += OnLoaded;
         Closed += OnClosed;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e) => await _viewModel.InitializeAsync();
+
+    private void OnOffWorkReached(object? sender, EventArgs e) => _showOffWorkReminder(_viewModel.WorkCountdown);
+
+    private void OnWorkFinished(object? sender, EventArgs e) => _showWorkFinished(_viewModel.WorkCountdown);
+
+    private void ShowWorkFinished(WorkCountdownViewModel countdown)
+    {
+        MessageBox.Show(this, $"{countdown.FinishMessage}\n\n{countdown.FinishDetails}", "下班提醒",
+            MessageBoxButton.OK, countdown.IsEarlyDeparture ? MessageBoxImage.Warning : MessageBoxImage.Information);
+    }
+
+    private void ShowOffWorkReminder(WorkCountdownViewModel countdown)
+    {
+        _offWorkReminder?.Close();
+        var reminder = new OffWorkReminderWindow(countdown);
+        reminder.Closed += (_, _) => { if (ReferenceEquals(_offWorkReminder, reminder)) _offWorkReminder = null; };
+        _offWorkReminder = reminder;
+        // Modeless and not owned by the main window: it can be seen while the toolbox is minimized.
+        // ShowActivated=false prevents stealing focus from a process-termination confirmation.
+        reminder.Show();
+    }
+
+    private void OnCountdownChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(WorkCountdownViewModel.IsOverdue) && !_viewModel.WorkCountdown.IsOverdue)
+            _offWorkReminder?.Close();
+    }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
@@ -50,7 +93,6 @@ public partial class MainWindow : Window
         catch (Exception exception)
         {
             _viewModel.FileUnlocker.ReportDropUnavailable(exception.Message);
-            _viewModel.ArchiveRecovery.ReportDropUnavailable();
         }
     }
 
@@ -63,8 +105,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            _fileDrops?.SetEnabled((_viewModel.IsFileUnlockerSelected && !_viewModel.FileUnlocker.IsBusy)
-                || (_viewModel.IsArchiveRecoverySelected && !_viewModel.ArchiveRecovery.IsBusy));
+            _fileDrops?.SetEnabled(_viewModel.IsFileUnlockerSelected && !_viewModel.FileUnlocker.IsBusy);
         }
         catch (Exception exception)
         {
@@ -77,14 +118,16 @@ public partial class MainWindow : Window
     private async void OnFilesDropped(string[] paths)
     {
         if (_viewModel.IsFileUnlockerSelected) await _viewModel.FileUnlocker.HandleDroppedPathsAsync(paths);
-        else if (_viewModel.IsArchiveRecoverySelected) _viewModel.ArchiveRecovery.HandleDroppedPaths(paths);
     }
 
     private void OnClosed(object? sender, EventArgs e)
     {
         _viewModel.PropertyChanged -= OnDropStateChanged;
         _viewModel.FileUnlocker.PropertyChanged -= OnDropStateChanged;
-        _viewModel.ArchiveRecovery.PropertyChanged -= OnDropStateChanged;
+        _viewModel.WorkCountdown.OffWorkReached -= OnOffWorkReached;
+        _viewModel.WorkCountdown.WorkFinished -= OnWorkFinished;
+        _viewModel.WorkCountdown.PropertyChanged -= OnCountdownChanged;
+        _offWorkReminder?.Close();
         _fileDrops?.Dispose();
         _viewModel.Dispose();
     }

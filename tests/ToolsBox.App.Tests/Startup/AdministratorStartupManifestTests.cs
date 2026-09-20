@@ -24,7 +24,10 @@ public sealed class AdministratorStartupManifestTests
         Assert.Equal("app.manifest", applicationManifest.Value);
         string startup = File.ReadAllText(Path.Combine(root, "src", "ToolsBox.App", "App.xaml.cs"));
         int gate = startup.IndexOf("AdministratorStartup.EnsureAdministrator", StringComparison.Ordinal);
-        Assert.True(gate > startup.IndexOf("--archive-worker", StringComparison.Ordinal));
+        int helper = startup.IndexOf("--file-path-worker", StringComparison.Ordinal);
+        Assert.True(helper >= 0);
+        Assert.True(gate > helper);
+        Assert.DoesNotContain("--archive-worker", startup);
         Assert.True(gate < startup.IndexOf("MainWindow = new MainWindow", StringComparison.Ordinal));
     }
 

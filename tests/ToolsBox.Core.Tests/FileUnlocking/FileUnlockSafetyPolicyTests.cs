@@ -9,6 +9,16 @@ public sealed class FileUnlockSafetyPolicyTests
     [InlineData(4, "System")]
     [InlineData(100, "csrss")]
     [InlineData(200, "LSASS.EXE")]
+    [InlineData(201, "explorer")]
+    [InlineData(202, "EXPLORER.EXE")]
+    [InlineData(203, "dwm")]
+    [InlineData(204, "DWM.EXE")]
+    [InlineData(205, "sihost")]
+    [InlineData(206, "SIHOST.EXE")]
+    [InlineData(207, "ShellExperienceHost")]
+    [InlineData(208, "SHELLEXPERIENCEHOST.EXE")]
+    [InlineData(209, "StartMenuExperienceHost")]
+    [InlineData(210, "STARTMENUEXPERIENCEHOST.EXE")]
     public void CanOperate_RejectsProtectedProcesses(int pid, string processName)
     {
         FileLockEntry entry = CreateEntry(pid, processName);

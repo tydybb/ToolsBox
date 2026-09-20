@@ -4,7 +4,7 @@
         xmlns:ports="clr-namespace:ToolsBox.App.Ports"
         xmlns:unlocking="clr-namespace:ToolsBox.App.FileUnlocking"
         xmlns:network="clr-namespace:ToolsBox.App.NetworkTraffic"
-        xmlns:archive="clr-namespace:ToolsBox.App.ArchiveRecovery"
+        xmlns:countdown="clr-namespace:ToolsBox.App.WorkCountdown"
         xmlns:views="clr-namespace:ToolsBox.App.Views"
         Title="宝哥工具箱" Icon="Assets/baoge-toolbox.ico" Width="1280" Height="760" MinWidth="980" MinHeight="580"
         WindowStartupLocation="CenterScreen" Background="#F4F6F8">
@@ -44,7 +44,7 @@
         <DataTemplate DataType="{x:Type ports:PortMonitorViewModel}"><views:PortMonitorView/></DataTemplate>
         <DataTemplate DataType="{x:Type unlocking:FileUnlockerViewModel}"><views:FileUnlockerView/></DataTemplate>
         <DataTemplate DataType="{x:Type network:NetworkTrafficViewModel}"><views:NetworkTrafficView/></DataTemplate>
-        <DataTemplate DataType="{x:Type archive:ArchiveRecoveryViewModel}"><views:ArchiveRecoveryView/></DataTemplate>
+        <DataTemplate DataType="{x:Type countdown:WorkCountdownViewModel}"><views:WorkCountdownView/></DataTemplate>
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -58,15 +58,15 @@
                 </RadioButton>
                 <RadioButton x:Name="FileNavigation" Grid.Row="2" Style="{StaticResource ToolNavigationStyle}" GroupName="Tools"
                              Command="{Binding ShowFileUnlockerCommand}" IsChecked="{Binding IsFileUnlockerSelected, Mode=OneWay}">
-                    <StackPanel Orientation="Horizontal"><TextBlock Text="◆" Foreground="#8FC1FF" Margin="0,0,10,0"/><TextBlock Text="文件解锁" FontWeight="SemiBold"/></StackPanel>
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="◆" Foreground="#8FC1FF" Margin="0,0,10,0"/><TextBlock Text="文件解除占用" FontWeight="SemiBold"/></StackPanel>
                 </RadioButton>
                 <RadioButton x:Name="NetworkNavigation" Grid.Row="3" Style="{StaticResource ToolNavigationStyle}" GroupName="Tools"
                              Command="{Binding ShowNetworkTrafficCommand}" IsChecked="{Binding IsNetworkTrafficSelected, Mode=OneWay}">
                     <StackPanel Orientation="Horizontal"><TextBlock Text="↕" Foreground="#8FC1FF" Margin="0,0,10,0"/><TextBlock Text="网络流量" FontWeight="SemiBold"/></StackPanel>
                 </RadioButton>
-                <RadioButton x:Name="ArchiveNavigation" Grid.Row="4" Style="{StaticResource ToolNavigationStyle}" GroupName="Tools"
-                             Command="{Binding ShowArchiveRecoveryCommand}" IsChecked="{Binding IsArchiveRecoverySelected, Mode=OneWay}">
-                    <TextBlock Text="压缩包密码找回" FontWeight="SemiBold"/>
+                <RadioButton x:Name="CountdownNavigation" Grid.Row="4" Style="{StaticResource ToolNavigationStyle}" GroupName="Tools"
+                             Command="{Binding ShowWorkCountdownCommand}" IsChecked="{Binding IsWorkCountdownSelected, Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="◷" Foreground="#8FC1FF" Margin="0,0,10,0"/><TextBlock Text="下班倒计时" FontWeight="SemiBold"/></StackPanel>
                 </RadioButton>
                 <TextBlock Grid.Row="6" Text="更多工具将逐步加入" Foreground="#728597" FontSize="11"/>
             </Grid>

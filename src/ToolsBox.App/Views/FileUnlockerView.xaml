@@ -5,13 +5,13 @@
     <Grid Margin="28,24,28,18">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <StackPanel>
-            <TextBlock Text="文件解锁" FontSize="28" FontWeight="SemiBold" Foreground="#1F2933"/>
+            <TextBlock Text="文件解除占用" FontSize="28" FontWeight="SemiBold" Foreground="#1F2933"/>
             <TextBlock Text="检测文件或文件夹的占用进程，并按需解除占用" Foreground="#637381" Margin="0,5,0,0"/>
         </StackPanel>
         <Grid Grid.Row="1" Margin="0,22,0,12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBox Text="{Binding PathText, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" ToolTip="输入文件或文件夹完整路径"/>
-            <Button Grid.Column="1" Content="选择文件" Click="OnBrowseFile"/><Button Grid.Column="2" Content="选择文件夹" Click="OnBrowseFolder"/>
+            <TextBox Text="{Binding PathText, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditPath}" VerticalContentAlignment="Center" ToolTip="输入文件或文件夹完整路径"/>
+            <Button Grid.Column="1" Content="选择文件" Click="OnBrowseFile" IsEnabled="{Binding CanEditPath}"/><Button Grid.Column="2" Content="选择文件夹" Click="OnBrowseFolder" IsEnabled="{Binding CanEditPath}"/>
             <Button Grid.Column="3" Content="检测占用" Command="{Binding ScanCommand}" Background="#246BFD" Foreground="White" BorderBrush="#246BFD"/>
             <Button Grid.Column="4" Content="管理员扫描" Command="{Binding ElevatedScanCommand}"/>
         </Grid>
@@ -55,7 +55,7 @@
                     <Run Text="已选 "/><Run Text="{Binding SelectedCount, Mode=OneWay}"/><Run Text=" 条记录，涉及 "/><Run Text="{Binding SelectedProcessCount, Mode=OneWay}"/><Run Text=" 个进程"/>
                 </TextBlock>
             </StackPanel>
-            <Button Grid.Column="1" Content="安全结束所选进程" HorizontalAlignment="Right" Click="OnTerminateProcesses" IsEnabled="{Binding CanActOnSelectedEntries}" Background="#FFF2F2" BorderBrush="#EAA4A4" Foreground="#9B2C2C"/>
+            <Button Grid.Column="1" Content="强制结束所选进程" HorizontalAlignment="Right" Click="OnTerminateProcesses" IsEnabled="{Binding CanActOnSelectedEntries}" Background="#FFF2F2" BorderBrush="#EAA4A4" Foreground="#9B2C2C" ToolTip="只强制结束确认清单中的进程，不递归结束子进程；未保存数据可能丢失。"/>
         </Grid>
         <Expander Grid.Row="5" Header="高级危险操作" IsExpanded="{Binding IsAdvancedExpanded}" Foreground="#9B2C2C">
             <Border Background="#FFF7ED" BorderBrush="#F1B97A" BorderThickness="1" CornerRadius="5" Padding="12" Margin="0,8,0,0">
