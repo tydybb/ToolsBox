@@ -21,6 +21,11 @@ public partial class MainWindow : Window
     private readonly Action<WorkCountdownViewModel> _showWorkFinished;
     private OffWorkReminderWindow? _offWorkReminder;
     private System.Diagnostics.Process? _webResourceProcess;
+    private Infrastructure.TrayIcon? _trayIcon;
+    // 用户点 X / Alt+F4 经由 Win32 WM_CLOSE 送达；程序化 Close() 不经过该消息。
+    private bool _closeFromUser;
+    private bool _trayExit;
+    private bool _trayTipShown;
 
     private void OpenWebResources(object sender, RoutedEventArgs e)
     {
@@ -70,6 +75,23 @@ public partial class MainWindow : Window
         Loaded += OnLoaded;
         Closing += (_, args) =>
         {
+            // 真实用户关闭（X、Alt+F4、任务栏“关闭”）不退出程序，而是像微信一样挂到托盘；
+            // 托盘“退出”菜单（_trayExit）与既有程序化 Close() 才会真正退出。
+            bool hideToTray = _closeFromUser && !_trayExit;
+            _closeFromUser = false;
+            if (hideToTray)
+            {
+                try
+                {
+                    MinimizeToTray();
+                    args.Cancel = true;
+                    return;
+                }
+                catch (InvalidOperationException)
+                {
+                    // 托盘不可用时按真实关闭处理，不能把窗口卡在无法退出的状态。
+                }
+            }
             try
             {
                 if (_webResourceProcess is { HasExited: false } &&
@@ -81,7 +103,43 @@ public partial class MainWindow : Window
         Closed += OnClosed;
     }
 
-    private async void OnLoaded(object sender, RoutedEventArgs e) => await _viewModel.InitializeAsync();
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        // 窗口打开即挂载托盘图标（微信习惯）；创建失败只影响托盘入口，
+        // 关闭窗口时 MinimizeToTray 会重试并回退为真实退出，绝不把程序卡死。
+        try { _trayIcon ??= new Infrastructure.TrayIcon(RestoreFromTray, ExitFromTray); }
+        catch (Exception) { _trayIcon = null; }
+        await _viewModel.InitializeAsync();
+    }
+
+    private void MinimizeToTray()
+    {
+        if (_trayIcon is null)
+        {
+            try { _trayIcon = new Infrastructure.TrayIcon(RestoreFromTray, ExitFromTray); }
+            catch (Exception error) { throw new InvalidOperationException("无法创建托盘图标。", error); }
+        }
+        bool wasVisible = IsVisible;
+        Hide();
+        if (wasVisible && !_trayTipShown)
+        {
+            _trayTipShown = true;
+            _trayIcon.ShowBalloon("已最小化到系统托盘", "宝哥工具箱仍在后台运行，右键单击托盘图标可退出程序。");
+        }
+    }
+
+    private void RestoreFromTray()
+    {
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Show();
+        Activate();
+    }
+
+    private void ExitFromTray()
+    {
+        _trayExit = true;
+        Close();
+    }
 
     private void OnOffWorkReached(object? sender, EventArgs e) => _showOffWorkReminder(_viewModel.WorkCountdown);
 
@@ -114,13 +172,23 @@ public partial class MainWindow : Window
     {
         try
         {
-            _fileDrops = new ShellFileDropReceiver(HwndSource.FromHwnd(new WindowInteropHelper(this).Handle), OnFilesDropped);
+            IntPtr handle = new WindowInteropHelper(this).Handle;
+            // 记录用户真正点击关闭按钮的 WM_CLOSE；程序化 Close() 不发送该消息，
+            // 因此托盘“退出”和既有测试的 Close() 仍会真正退出。
+            HwndSource.FromHwnd(handle)?.AddHook(WmCloseHook);
+            _fileDrops = new ShellFileDropReceiver(HwndSource.FromHwnd(handle), OnFilesDropped);
             UpdateDropState();
         }
         catch (Exception exception)
         {
             _viewModel.FileUnlocker.ReportDropUnavailable(exception.Message);
         }
+    }
+
+    private IntPtr WmCloseHook(IntPtr window, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (message == 0x0010 /* WM_CLOSE */) _closeFromUser = true;
+        return IntPtr.Zero;
     }
 
     private void OnDropStateChanged(object? sender, PropertyChangedEventArgs e)
@@ -158,5 +226,7 @@ public partial class MainWindow : Window
         _fileDrops?.Dispose();
         _viewModel.Dispose();
         _webResourceProcess?.Dispose();
+        _trayIcon?.Dispose();
+        _trayIcon = null;
     }
 }
