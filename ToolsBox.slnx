@@ -10,5 +10,14 @@
     <Project Path="tests/ToolsBox.Core.Tests/ToolsBox.Core.Tests.csproj" />
     <Project Path="tests/ToolsBox.Windows.Tests/ToolsBox.Windows.Tests.csproj" />
     <Project Path="tests/ToolsBox.MediaDownloads.Tests/ToolsBox.MediaDownloads.Tests.csproj" />
+    <Project Path="tests/ToolsBox.NetworkSmoke/ToolsBox.NetworkSmoke.csproj" />
+    <Project Path="tests/ToolsBox.BrowserSmoke/ToolsBox.BrowserSmoke.csproj" />
+    <Project Path="tests/ToolsBox.BrowserLibrarySmoke/ToolsBox.BrowserLibrarySmoke.csproj" />
+    <Project Path="tests/ToolsBox.WebLaunchSmoke/ToolsBox.WebLaunchSmoke.csproj" />
+    <Project Path="tests/ToolsBox.MediaSmoke/ToolsBox.MediaSmoke.csproj" />
+    <Project Path="tests/ToolsBox.PlayerSmoke/ToolsBox.PlayerSmoke.csproj" />
+    <Project Path="tests/ToolsBox.PlayerProbe/ToolsBox.PlayerProbe.csproj" />
+    <Project Path="tests/ToolsBox.DouyinProbe/ToolsBox.DouyinProbe.csproj" />
+    <Project Path="tests/ToolsBox.BangumiProbe/ToolsBox.BangumiProbe.csproj" />
   </Folder>
 </Solution>
