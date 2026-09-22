@@ -3,10 +3,12 @@
   <ItemGroup>
     <ProjectReference Include="..\ToolsBox.Core\ToolsBox.Core.csproj" />
     <ProjectReference Include="..\ToolsBox.Windows\ToolsBox.Windows.csproj" />
+    <ProjectReference Include="..\ToolsBox.MediaDownloads\ToolsBox.MediaDownloads.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\baoge-toolbox.ico" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
   </ItemGroup>
 
   <PropertyGroup>

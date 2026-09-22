@@ -1,0 +1,74 @@
+<Window x:Class="ToolsBox.App.WebResources.WebResourceWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:wv="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+ Title="网页资源下载 · 宝哥工具箱" Width="1320" Height="900" MinWidth="1000" MinHeight="700" Background="#F4F6F8">
+ <Window.Resources>
+  <Style TargetType="Button"><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="4"/></Style>
+  <Style TargetType="TextBox"><Setter Property="Padding" Value="8,6"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+ </Window.Resources>
+ <Grid Margin="12">
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="2*"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="150"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <DockPanel>
+   <TextBlock Text="网页资源下载" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
+   <Button Content="清除网站数据" Click="ClearSiteData" DockPanel.Dock="Right"/>
+   <Button x:Name="EnvironmentDetectionButton" Content="环境检测" Click="DetectEnvironment" DockPanel.Dock="Right"/>
+   <Button x:Name="HistoryButton" Content="历史记录" Click="ShowHistory" DockPanel.Dock="Right"/>
+   <Button x:Name="FavoritesButton" Content="收藏夹" Click="ShowFavorites" DockPanel.Dock="Right"/>
+   <Button x:Name="AddFavoriteButton" Content="☆ 收藏当前页" Click="AddFavorite" DockPanel.Dock="Right"/>
+   <TextBlock x:Name="ComponentStatus" Text="视频组件尚未检查" VerticalAlignment="Center" Margin="12,0"/>
+  </DockPanel>
+  <DockPanel Grid.Row="1" Margin="0,8">
+   <Button Content="←" Click="GoBack"/><Button Content="→" Click="GoForward"/><Button Content="刷新" Click="Reload"/>
+   <Button Content="打开" Click="Navigate" DockPanel.Dock="Right"/>
+   <Button x:Name="PopOutBrowserButton" Content="独立浏览 ↗" Click="PopOutBrowser" DockPanel.Dock="Right"/>
+   <CheckBox x:Name="CaptureEnabled" Content="持续识别" IsChecked="True" VerticalAlignment="Center" Margin="10,0" DockPanel.Dock="Right"/>
+   <TextBox x:Name="Address" KeyDown="AddressKeyDown" ToolTip="输入 http 或 https 网页地址；不会自动抓取其他页面"/>
+  </DockPanel>
+  <Grid Grid.Row="2" Grid.RowSpan="3">
+   <Grid.RowDefinitions><RowDefinition Height="2*" MinHeight="100"/><RowDefinition Height="8"/><RowDefinition Height="*" MinHeight="140"/></Grid.RowDefinitions>
+   <Grid>
+    <Border x:Name="BrowserHost" BorderBrush="#CBD2D9" BorderThickness="1"><wv:WebView2 x:Name="Browser"/></Border>
+    <TextBlock x:Name="PopOutHint" Text="网页已在独立窗口打开，资源仍会持续识别。关闭独立窗口即可放回这里。" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20" Visibility="Collapsed"/>
+   </Grid>
+   <GridSplitter x:Name="BrowserHeightSplitter" Grid.Row="1" Height="8" HorizontalAlignment="Stretch" VerticalAlignment="Center" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" ShowsPreview="True" Background="#CBD2D9" ToolTip="上下拖动调整网页与资源列表的高度"/>
+   <Grid Grid.Row="2"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+  <WrapPanel Margin="0,6">
+   <ComboBox x:Name="KindFilter" Width="120" Height="32" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="8,0" Margin="4" SelectedIndex="0" SelectionChanged="FilterChanged"><ComboBoxItem Content="全部资源"/><ComboBoxItem Content="图片"/><ComboBoxItem Content="视频"/></ComboBox>
+   <Button Content="全选当前列表" Click="SelectAll"/><Button Content="取消选择" Click="ClearSelection"/>
+   <Button Content="解析当前页面视频" Click="InspectPage"/><Button Content="读取所选视频清晰度" Click="InspectSelected"/>
+   <Button Content="清空资源列表" Click="ClearResources"/>
+   <TextBlock x:Name="SelectionSummary" VerticalAlignment="Center" Margin="8,0"/>
+  </WrapPanel>
+  <DataGrid x:Name="ResourcesGrid" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Extended" SelectionUnit="FullRow" IsReadOnly="True">
+   <DataGrid.Columns>
+    <DataGridTemplateColumn Width="48" CanUserSort="False">
+     <DataGridTemplateColumn.Header><CheckBox x:Name="SelectAllResources" IsThreeState="True" IsChecked="False" IsEnabled="False" Click="ToggleSelectAll" ToolTip="全选或取消当前筛选结果"/></DataGridTemplateColumn.Header>
+     <DataGridTemplateColumn.CellTemplate><DataTemplate><CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="勾选此资源用于下载"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
+    <DataGridTemplateColumn Header="预览" Width="70"><DataGridTemplateColumn.CellTemplate><DataTemplate><Image Source="{Binding Thumbnail}" Width="56" Height="40" Stretch="Uniform"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+    <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" MinWidth="180"/>
+    <DataGridTextColumn Header="类型" Binding="{Binding KindLabel}" Width="90"/>
+    <DataGridTextColumn Header="来源" Binding="{Binding Host}" Width="160"/>
+    <DataGridTextColumn Header="页面" Binding="{Binding PageHost}" Width="140"/>
+    <DataGridTextColumn Header="大小" Binding="{Binding SizeLabel}" Width="90"/>
+    <DataGridTemplateColumn Header="下载清晰度" Width="210"><DataGridTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Formats}" SelectedItem="{Binding SelectedFormat, Mode=TwoWay}" DisplayMemberPath="Label" IsEnabled="{Binding IsVideo}"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+   </DataGrid.Columns>
+  </DataGrid>
+   </Grid>
+  </Grid>
+  <DockPanel Grid.Row="5" Margin="0,8">
+   <Button Content="选择保存目录" Click="ChooseFolder"/><Button Content="下载所选资源" Click="DownloadSelected"/>
+   <Button Content="取消所选任务" Click="CancelTask"/><Button Content="重试所选任务" Click="RetryTask"/><Button Content="打开文件夹" Click="OpenFolder"/>
+   <TextBox x:Name="OutputFolder" IsReadOnly="True" ToolTip="先选择保存目录"/>
+  </DockPanel>
+  <DataGrid x:Name="TasksGrid" Grid.Row="6" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
+   <DataGrid.Columns>
+    <DataGridTextColumn Header="任务" Binding="{Binding Name}" Width="*" MinWidth="200"/>
+    <DataGridTextColumn Header="状态" Binding="{Binding Status}" Width="2*" MinWidth="300"/>
+    <DataGridTextColumn Header="进度" Binding="{Binding PercentText}" Width="85"/>
+   </DataGrid.Columns>
+  </DataGrid>
+  <TextBlock x:Name="Status" Grid.Row="7" Text="普通权限浏览 · 仅识别当前页面 · 请只下载有权保存的资源。不支持 DRM 绕过。" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="#52606D"/>
+ </Grid>
+</Window>

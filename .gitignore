@@ -7,3 +7,5 @@ obj/
 .git-codex-backup/
 .git-codex-live/
 .worktrees/
+.workbuddy/
+/AGENTS.md

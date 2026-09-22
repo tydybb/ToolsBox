@@ -25,12 +25,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ShowFileUnlockerCommand = new RelayCommand(() => CurrentTool = FileUnlocker);
         ShowNetworkTrafficCommand = new RelayCommand(() => CurrentTool = NetworkTraffic);
         ShowWorkCountdownCommand = new RelayCommand(() => CurrentTool = WorkCountdown);
+        ShowWebResourcesCommand = new RelayCommand(() => CurrentTool = WebResources);
     }
 
     public PortMonitorViewModel PortMonitor { get; }
     public FileUnlockerViewModel FileUnlocker { get; }
     public NetworkTrafficViewModel NetworkTraffic { get; }
     public WorkCountdownViewModel WorkCountdown { get; }
+    public WebResources.WebResourcesHome WebResources { get; } = new();
+    public RelayCommand ShowWebResourcesCommand { get; }
     public RelayCommand ShowWorkCountdownCommand { get; }
     public RelayCommand ShowPortMonitorCommand { get; }
     public RelayCommand ShowFileUnlockerCommand { get; }
@@ -47,6 +50,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(IsFileUnlockerSelected));
                 OnPropertyChanged(nameof(IsNetworkTrafficSelected));
                 OnPropertyChanged(nameof(IsWorkCountdownSelected));
+                OnPropertyChanged(nameof(IsWebResourcesSelected));
             }
         }
     }
@@ -55,6 +59,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool IsFileUnlockerSelected => ReferenceEquals(CurrentTool, FileUnlocker);
     public bool IsNetworkTrafficSelected => ReferenceEquals(CurrentTool, NetworkTraffic);
     public bool IsWorkCountdownSelected => ReferenceEquals(CurrentTool, WorkCountdown);
+    public bool IsWebResourcesSelected => ReferenceEquals(CurrentTool, WebResources);
 
     public Task InitializeAsync() => PortMonitor.InitializeAsync();
 

@@ -32,11 +32,14 @@ public sealed class WindowStartupAndNavigationTests
                 Assert.Null(window.FindName("ArchiveNavigation"));
                 Assert.Null(vm.GetType().GetProperty("ArchiveRecovery"));
                 var countdown = Assert.IsAssignableFrom<ToggleButton>(window.FindName("CountdownNavigation"));
-                ToggleButton[] buttons = [ports, files, network, countdown];
+                var web = Assert.IsAssignableFrom<ToggleButton>(window.FindName("WebResourcesNavigation"));
+                Assert.Same(ports.Style, web.Style);
+                ToggleButton[] buttons = [ports, files, network, countdown, web];
                 object[] pages = [vm.PortMonitor, vm.FileUnlocker, vm.NetworkTraffic,
-                    vm.GetType().GetProperty("WorkCountdown")!.GetValue(vm)!];
+                    vm.GetType().GetProperty("WorkCountdown")!.GetValue(vm)!,
+                    vm.GetType().GetProperty("WebResources")!.GetValue(vm)!];
                 await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
-                foreach (int index in new[] { 0, 2, 1, 3, 0, 3 })
+                foreach (int index in new[] { 0, 2, 1, 3, 4, 0, 4, 3 })
                 {
                     buttons[index].Command.Execute(null);
                     await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
@@ -50,6 +53,7 @@ public sealed class WindowStartupAndNavigationTests
                             Assert.IsType<SolidColorBrush>(buttons[i].Background).Color.ToString());
                     }
                 }
+                WpfTestSnapshot.SaveWindowContent(window, 1280, 760, "main-navigation-unified.png");
             }
             finally
             {

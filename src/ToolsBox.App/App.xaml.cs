@@ -17,6 +17,19 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         base.OnStartup(e);
 
+        if (e.Args.Length == 3 && e.Args[0] == "--web-resources")
+        {
+            if (!WebResources.WebResourceLauncher.CanRunBrowser(WebResources.WebResourceLauncher.IsAdministrator()) ||
+                !int.TryParse(e.Args[1], out int parentId) || !long.TryParse(e.Args[2], out long parentTicks))
+            { Shutdown(1); return; }
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+            var browser = new WebResources.WebResourceWindow();
+            MainWindow = browser;
+            browser.Show();
+            browser.WatchParent(parentId, parentTicks);
+            return;
+        }
+
         if (e.Args.Length == 1 && e.Args[0] == "--file-path-worker")
         {
             try

@@ -20,6 +20,23 @@ public partial class MainWindow : Window
     private readonly Action<WorkCountdownViewModel> _showOffWorkReminder;
     private readonly Action<WorkCountdownViewModel> _showWorkFinished;
     private OffWorkReminderWindow? _offWorkReminder;
+    private System.Diagnostics.Process? _webResourceProcess;
+
+    private void OpenWebResources(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_webResourceProcess is { HasExited: false })
+            { MessageBox.Show(this, "网页资源下载窗口已打开，请在任务栏切换到该窗口。"); return; }
+            _webResourceProcess?.Dispose();
+            _webResourceProcess = WebResources.WebResourceLauncher.Launch();
+        }
+        catch (Exception error)
+        {
+            string detail = error is Win32Exception native ? native.Message : $"启动异常：{error.GetType().Name}。";
+            MessageBox.Show(this, "无法以普通权限启动浏览窗口。\n\n" + detail + "\n\n这不是主程序缺少管理员权限。请保留上述错误信息用于排查。", "网页资源下载", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
 
     public MainWindow() : this(new WorkCountdownViewModel()) { }
 
@@ -51,6 +68,16 @@ public partial class MainWindow : Window
         _viewModel.WorkCountdown.WorkFinished += OnWorkFinished;
         _viewModel.WorkCountdown.PropertyChanged += OnCountdownChanged;
         Loaded += OnLoaded;
+        Closing += (_, args) =>
+        {
+            try
+            {
+                if (_webResourceProcess is { HasExited: false } &&
+                    MessageBox.Show(this, "网页资源窗口仍在运行。退出工具箱会关闭该窗口并取消未完成的下载，确定退出？", "退出宝哥工具箱", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
+                    args.Cancel = true;
+            }
+            catch (InvalidOperationException) { }
+        };
         Closed += OnClosed;
     }
 
@@ -130,5 +157,6 @@ public partial class MainWindow : Window
         _offWorkReminder?.Close();
         _fileDrops?.Dispose();
         _viewModel.Dispose();
+        _webResourceProcess?.Dispose();
     }
 }
