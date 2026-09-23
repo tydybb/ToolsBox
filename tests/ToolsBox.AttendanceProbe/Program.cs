@@ -13,7 +13,7 @@ try
     if (located.Paths is not { } paths) { Console.WriteLine("{\"Located\":false}"); return; }
     string? salt = DingTalkKeyVault.ReadSalt(paths.UserConfigPath);
     if (salt is null) { Console.WriteLine("{\"ConfigSupported\":false}"); return; }
-    var candidates = DingTalkKeyVault.UidCandidates(paths.LogDir).ToList();
+    var candidates = DingTalkKeyVault.UidCandidates(paths).ToList();
     if(paths.LogDir is not null && Directory.Exists(paths.LogDir))
         foreach(var child in Directory.EnumerateDirectories(paths.LogDir).Take(8))
             if((File.GetAttributes(child) & FileAttributes.ReparsePoint)==0) candidates.AddRange(DingTalkKeyVault.UidCandidates(child));

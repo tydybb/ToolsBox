@@ -22,8 +22,14 @@ public sealed class DingTalkAttendanceChecker : IAttendanceChecker
             if (located.Paths is not { } paths) return AttendanceStatus.Failure(located.Error ?? "未找到数据目录。");
             string? salt = DingTalkKeyVault.ReadSalt(paths.UserConfigPath);
             if (salt is null) return AttendanceStatus.Failure("无法读取受支持的钉钉账号配置。");
-            key = DingTalkKeyVault.FindVerifiedKey(DingTalkKeyVault.UidCandidates(paths.LogDir), salt, DingTalkKeyVault.ReadSharedHead(paths.DbPath, 16));
-            if (key is null) return AttendanceStatus.Failure("本地数据版本或密钥校验不受支持。");
+            // 三种失败分开提示：无日志目录（未生成/被清理/布局不同）、有日志但没认出 uid、认得出但解不开（版本不受支持）。
+            IReadOnlyList<string> uids = DingTalkKeyVault.UidCandidates(paths);
+            if (uids.Count is 0)
+                return AttendanceStatus.Failure(paths.LogDir is null || !Directory.Exists(paths.LogDir)
+                    ? "未能识别登录账号：未找到本机钉钉日志目录，无法取得 uid。"
+                    : "未能识别登录账号：账号配置与本机日志中均未找到 uid，日志可能已被清理。");
+            key = DingTalkKeyVault.FindVerifiedKey(uids, salt, DingTalkKeyVault.ReadSharedHead(paths.DbPath, 16));
+            if (key is null) return AttendanceStatus.Failure("识别到候选账号，但密钥与本机数据不匹配；钉钉版本可能不受支持。");
             plain = DingTalkDbDecryptor.DecryptToMemory(key, paths.DbPath, paths.WalPath);
             return QueryToday(plain, now);
         }

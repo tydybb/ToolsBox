@@ -63,7 +63,73 @@ public sealed class WalTests
     public void UidCandidatesIncludesBoundedChildLogs()
     {
         string dir=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N")); Directory.CreateDirectory(Path.Combine(dir,"child"));
-        try {File.WriteAllText(Path.Combine(dir,"child","sample.log"),"real_uid=123456789"); Assert.Contains("123456789",DingTalkKeyVault.UidCandidates(dir));}
+        try
+        {
+            File.WriteAllText(Path.Combine(dir,"child","sample.log"),"real_uid=123456789");
+            File.WriteAllText(Path.Combine(dir,"child","rotated.2026-09-23"),"userId: 987654321");
+            var candidates=DingTalkKeyVault.UidCandidates(dir);
+            Assert.Contains("123456789",candidates);
+            Assert.Contains("987654321",candidates);
+        }
+        finally{Directory.Delete(dir,true);}
+    }
+
+    [Fact]
+    public void UidCandidatesReadConfigFieldsWithoutLogDirectory()
+    {
+        string dir=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N")); Directory.CreateDirectory(dir);
+        try
+        {
+            string config=Path.Combine(dir,"user_config");
+            File.WriteAllText(config,"{\"salt\":\"s\",\"userId\":123456789,\"uid\":\"abc123\",\"real_uid\":\"1234\"}");
+            var paths=new DingTalkAccountPaths(dir,Path.Combine(dir,"db"),null,config,null);
+            var candidates=DingTalkKeyVault.UidCandidates(paths);
+            Assert.Equal("123456789",candidates[0]);
+            Assert.Contains("abc123",candidates);
+            Assert.Contains("1234",candidates);
+        }
+        finally{Directory.Delete(dir,true);}
+    }
+
+    [Fact]
+    public void UidCandidatesReadNestedAndUnnamedConfigDigits()
+    {
+        string dir=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N")); Directory.CreateDirectory(dir);
+        try
+        {
+            string config=Path.Combine(dir,"user_config");
+            File.WriteAllText(config,"{\"account\":{\"profile\":{\"memberId\":\"987654321\"}},\"loginTime\":1790034640777}");
+            var paths=new DingTalkAccountPaths(dir,Path.Combine(dir,"db"),null,config,null);
+            var candidates=DingTalkKeyVault.UidCandidates(paths);
+            Assert.Contains("987654321",candidates);
+            Assert.Contains("1790034640777",candidates);
+        }
+        finally{Directory.Delete(dir,true);}
+    }
+
+    [Fact]
+    public void UidCandidatesIncludeAccountIdDirName()
+    {
+        string dir=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N")); Directory.CreateDirectory(dir);
+        try
+        {
+            var paths=new DingTalkAccountPaths(Path.Combine(dir,"499135689012_v3"),Path.Combine(dir,"db"),null,Path.Combine(dir,"missing_config"),null);
+            Assert.Contains("499135689012",DingTalkKeyVault.UidCandidates(paths));
+        }
+        finally{Directory.Delete(dir,true);}
+    }
+
+    [Fact]
+    public void UidCandidatesReadBase64WrappedConfig()
+    {
+        string dir=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N")); Directory.CreateDirectory(dir);
+        try
+        {
+            string config=Path.Combine(dir,"user_config");
+            File.WriteAllText(config,Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"realUid\":\"987654321\"}")));
+            var paths=new DingTalkAccountPaths(dir,Path.Combine(dir,"db"),null,config,null);
+            Assert.Contains("987654321",DingTalkKeyVault.UidCandidates(paths));
+        }
         finally{Directory.Delete(dir,true);}
     }
 }

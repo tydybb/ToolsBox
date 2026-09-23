@@ -7,13 +7,14 @@ namespace ToolsBox.Core.Tests.Attendance;
 public sealed class LocalReaderTests
 {
     [Theory]
-    [InlineData(2950, true)]
-    [InlineData(1, false)]
-    public void SyntheticEncryptedDatabaseReadStaysInMemory(int contentType, bool expected)
+    [InlineData(2950, true, true)]
+    [InlineData(1, false, true)]
+    [InlineData(2950, true, false)]
+    public void SyntheticEncryptedDatabaseReadStaysInMemory(int contentType, bool expected, bool uidFromLogs)
     {
         string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(dir, "a_v3", "DBFiles"));
-        Directory.CreateDirectory(Path.Combine(dir, "log"));
+        if (uidFromLogs) Directory.CreateDirectory(Path.Combine(dir, "log"));
         string source = Path.Combine(dir, "synthetic.db");
         var now = new DateTime(2026, 9, 22, 9, 0, 0);
         try
@@ -29,8 +30,9 @@ public sealed class LocalReaderTests
                 cmd.ExecuteNonQuery();
                 for(int i=0;i<127;i++) {cmd.CommandText=$"CREATE TABLE tbmsg{i}(content TEXT, createdAt INTEGER, contentType INTEGER)";cmd.ExecuteNonQuery();}
             }
-            File.WriteAllText(Path.Combine(dir, "a_v3", "user_config"), "{\"salt\":\"synthetic\"}");
-            File.WriteAllText(Path.Combine(dir, "log", "sample.log"), "real_uid=123456789");
+            File.WriteAllText(Path.Combine(dir, "a_v3", "user_config"),
+                uidFromLogs ? "{\"salt\":\"synthetic\"}" : "{\"salt\":\"synthetic\",\"uid\":\"123456789\"}");
+            if (uidFromLogs) File.WriteAllText(Path.Combine(dir, "log", "sample.log"), "real_uid=123456789");
             using var aes = Aes.Create(); aes.Key = DingTalkKeyVault.DeriveKey("123456789", "synthetic");
             File.WriteAllBytes(Path.Combine(dir, "a_v3", "DBFiles", "dingtalk.db"), aes.EncryptEcb(File.ReadAllBytes(source), PaddingMode.None));
             string sentinel = Path.Combine(dir, "attendance-keep.db"); File.WriteAllText(sentinel, "keep");
@@ -39,6 +41,56 @@ public sealed class LocalReaderTests
             Assert.Equal(expected, result.ClockedIn);
             Assert.Equal("keep", File.ReadAllText(sentinel));
             Assert.Equal(2, Directory.GetFiles(dir).Length);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void MissingLogDirectoryReportsLogDirectoryGuidance()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(dir, "a_v3", "DBFiles"));
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "a_v3", "user_config"), "{\"salt\":\"synthetic\"}");
+            File.WriteAllBytes(Path.Combine(dir, "a_v3", "DBFiles", "dingtalk.db"), new byte[32]);
+            var result = new DingTalkAttendanceChecker(new DingTalkDataLocator(new[] { dir }), dir).Check(new DateTime(2026, 9, 22, 9, 0, 0));
+            Assert.False(result.Obtained);
+            Assert.Contains("未找到本机钉钉日志目录", result.Error ?? "");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void ExistingLogDirWithoutUidReportsCleanupGuidance()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(dir, "a_v3", "DBFiles"));
+        Directory.CreateDirectory(Path.Combine(dir, "log"));
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "a_v3", "user_config"), "{\"salt\":\"synthetic\"}");
+            File.WriteAllBytes(Path.Combine(dir, "a_v3", "DBFiles", "dingtalk.db"), new byte[32]);
+            var result = new DingTalkAttendanceChecker(new DingTalkDataLocator(new[] { dir }), dir).Check(new DateTime(2026, 9, 22, 9, 0, 0));
+            Assert.False(result.Obtained);
+            Assert.Contains("账号配置与本机日志中均未找到 uid", result.Error ?? "");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void CandidateUidWithMismatchedHeaderReportsVersionGuidance()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(dir, "a_v3", "DBFiles"));
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "a_v3", "user_config"), "{\"salt\":\"synthetic\",\"uid\":\"123456789\"}");
+            File.WriteAllBytes(Path.Combine(dir, "a_v3", "DBFiles", "dingtalk.db"), new byte[32]);
+            var result = new DingTalkAttendanceChecker(new DingTalkDataLocator(new[] { dir }), dir).Check(new DateTime(2026, 9, 22, 9, 0, 0));
+            Assert.False(result.Obtained);
+            Assert.Contains("识别到候选账号，但密钥与本机数据不匹配", result.Error ?? "");
+            Assert.Contains("钉钉版本可能不受支持", result.Error ?? "");
         }
         finally { Directory.Delete(dir, true); }
     }
