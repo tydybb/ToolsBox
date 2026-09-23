@@ -23,6 +23,8 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
     private string _errorMessage = "";
     private bool _hasRemindedOffWork;
     private bool _disposed;
+    private bool _overtimeEdited;
+    private bool _inputsEdited;
 
     public WorkCountdownViewModel(Func<DateTime>? now = null, ICountdownStateStore? store = null, bool startTimer = true)
     {
@@ -67,7 +69,7 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
     public string OvertimeText
     {
         get => _overtimeText;
-        set { if (SetProperty(ref _overtimeText, value)) InputsChanged(); }
+        set { if (SetProperty(ref _overtimeText, value)) { _overtimeEdited=true; InputsChanged(); } }
     }
 
     public CountdownDayMode DayMode
@@ -181,6 +183,39 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
         RemindIfOffWorkReached();
     }
 
+    /// <summary>Only a real same-day clock-in can start a timer. Manual acknowledgement never calls this.</summary>
+    public bool ImportClockIn(DateTime clockIn, Func<bool> confirmReplacement, CountdownDayMode? inferredMode = null)
+    {
+        DateTime now = _now();
+        if (_disposed || clockIn.Date != now.Date || clockIn > now || clockIn.TimeOfDay < new TimeSpan(7,30,0)) return false;
+        if (IsFinished && _activeState?.WorkDate == DateOnly.FromDateTime(now)) return false;
+        string time = clockIn.ToString("HH:mm",CultureInfo.InvariantCulture);
+        CountdownDayMode mode=inferredMode??DayMode;
+        string overtime=inferredMode==CountdownDayMode.Workday && _activeState is null && !_overtimeEdited?"0":OvertimeText;
+        try
+        {
+            if(!int.TryParse(overtime.Trim(),NumberStyles.None,CultureInfo.InvariantCulture,out int hours))throw new ArgumentException("加班时间必须是非负整数小时。");
+            _=Calculate(new(DateOnly.FromDateTime(now),time,mode,hours));
+        }
+        catch(ArgumentException e){ErrorMessage=e.Message;return false;}
+        bool same=_activeState?.WorkDate == DateOnly.FromDateTime(now) && _activeState.StartTime == time && _activeState.Mode==mode;
+        if(same && !_inputsEdited && string.IsNullOrEmpty(ErrorMessage))return true;
+        bool conflict = _activeState?.WorkDate == DateOnly.FromDateTime(now) ||
+            _inputsEdited;
+        var expectedState=_activeState;string expectedInput=StartTimeText,expectedOvertime=OvertimeText;var expectedMode=DayMode;
+        if (conflict && (!same || _inputsEdited) && !confirmReplacement()) return false;
+        // Confirmation can run a nested message loop; never overwrite a newly finished task.
+        if (_disposed || _now().Date != now.Date || IsFinished && _activeState?.WorkDate == DateOnly.FromDateTime(now) ||
+            _activeState!=expectedState || StartTimeText!=expectedInput || OvertimeText!=expectedOvertime || DayMode!=expectedMode) return false;
+        string old = StartTimeText;
+        DayMode=mode;OvertimeText=overtime;
+        StartTimeText = time;
+        Start();
+        if (_schedule?.Start.Date == now.Date && _schedule.Start.ToString("HH:mm",CultureInfo.InvariantCulture) == time) return string.IsNullOrEmpty(ErrorMessage);
+        StartTimeText = old;
+        return false;
+    }
+
     private void UseCurrentTime()
     {
         if (_disposed) return;
@@ -227,7 +262,7 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
             _timer?.Start();
             StartTimeText = state.StartTime;
             ErrorMessage = "";
-            try { _store.Save(state); }
+            try { _store.Save(state); _inputsEdited = false; }
             catch (Exception error) when (IsStorageError(error))
             { ErrorMessage = "倒计时已开始，但无法保存记录，关闭后可能无法恢复。"; }
             NotifyDisplay();
@@ -299,6 +334,7 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
 
     private void InputsChanged()
     {
+        _inputsEdited = true;
         ErrorMessage = "";
         NotifyDisplay();
     }

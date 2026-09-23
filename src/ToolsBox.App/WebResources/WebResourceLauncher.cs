@@ -24,14 +24,27 @@ public static class WebResourceLauncher
 
     public static Process Launch()
     {
-        string exe = Environment.ProcessPath ?? throw new InvalidOperationException("无法定位程序。");
         var arguments = new List<string>();
-        if (Path.GetFileNameWithoutExtension(exe).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
-            arguments.Add(Path.GetFullPath(Environment.GetCommandLineArgs()[0]));
         arguments.Add("--web-resources");
         using var parent = Process.GetCurrentProcess();
         arguments.Add(parent.Id.ToString());
         arguments.Add(parent.StartTime.ToUniversalTime().Ticks.ToString());
+        return LaunchOrdinaryTool(arguments);
+    }
+
+    public static Process LaunchAttendance() => LaunchOrdinaryTool(["--attendance-agent"], requireSameUser: true);
+
+    public static void ValidateAttendanceIdentity(string? currentSid, string? desktopSid)
+    {
+        if (string.IsNullOrEmpty(currentSid) || !string.Equals(currentSid, desktopSid, StringComparison.Ordinal))
+            throw new InvalidOperationException("请使用与当前 Windows 桌面相同的账号启用打卡提醒，不能使用其他管理员账号代为启用。");
+    }
+
+    private static Process LaunchOrdinaryTool(List<string> arguments, bool requireSameUser = false)
+    {
+        string exe = Environment.ProcessPath ?? throw new InvalidOperationException("无法定位程序。");
+        if (Path.GetFileNameWithoutExtension(exe).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
+            arguments.Insert(0,Path.GetFullPath(Environment.GetCommandLineArgs()[0]));
         if (!IsAdministrator())
         {
             var start = new ProcessStartInfo(exe) { UseShellExecute = false };
@@ -47,6 +60,12 @@ public static class WebResourceLauncher
         if (!OpenProcessToken(process, 0x0002 | 0x0008, out var token)) throw NativeFailure("读取普通用户令牌");
         using (token)
         {
+            if (requireSameUser)
+            {
+                using var currentIdentity = WindowsIdentity.GetCurrent();
+                using var desktopIdentity = new WindowsIdentity(token.DangerousGetHandle());
+                ValidateAttendanceIdentity(currentIdentity.User?.Value, desktopIdentity.User?.Value);
+            }
             if (!DuplicateTokenEx(token, MaximumAllowedTokenAccess, IntPtr.Zero, 2, 1, out var primary)) throw NativeFailure("复制普通用户令牌");
             using (primary)
             {

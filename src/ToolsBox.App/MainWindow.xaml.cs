@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private bool _closeFromUser;
     private bool _trayExit;
     private bool _trayTipShown;
+    private Attendance.AttendanceMainIntegration? _attendance;
 
     private void OpenWebResources(object sender, RoutedEventArgs e)
     {
@@ -43,7 +44,11 @@ public partial class MainWindow : Window
         }
     }
 
-    public MainWindow() : this(new WorkCountdownViewModel()) { }
+    public MainWindow() : this(new WorkCountdownViewModel())
+    {
+        try{_attendance=new Attendance.AttendanceMainIntegration(_viewModel.WorkCountdown);}
+        catch(Exception){ /* Never auto-enable attendance if its settings cannot be read. */ }
+    }
 
     public MainWindow(WorkCountdownViewModel countdown, Action<WorkCountdownViewModel>? showReminder = null)
         : this(countdown, showReminder, null) { }
@@ -217,6 +222,7 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        _attendance?.Dispose();
         _viewModel.PropertyChanged -= OnDropStateChanged;
         _viewModel.FileUnlocker.PropertyChanged -= OnDropStateChanged;
         _viewModel.WorkCountdown.OffWorkReached -= OnOffWorkReached;

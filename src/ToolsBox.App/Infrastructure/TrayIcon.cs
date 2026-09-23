@@ -12,7 +12,7 @@ internal sealed class TrayIcon : IDisposable
     private readonly System.Windows.Forms.NotifyIcon _notifyIcon;
     private readonly System.Windows.Forms.ContextMenuStrip _menu;
 
-    public TrayIcon(Action restore, Action exit)
+    public TrayIcon(Action restore, Action exit, bool visible = true)
     {
         ArgumentNullException.ThrowIfNull(restore);
         ArgumentNullException.ThrowIfNull(exit);
@@ -25,13 +25,18 @@ internal sealed class TrayIcon : IDisposable
             Text = "宝哥工具箱",
             Icon = LoadIcon(),
             ContextMenuStrip = _menu,
-            Visible = true,
+            Visible = visible,
         };
         // 左键单击（微信习惯）恢复窗口；右键交给上面的菜单。
         _notifyIcon.MouseClick += (_, e) =>
         {
             if (e.Button == System.Windows.Forms.MouseButtons.Left) restore();
         };
+    }
+
+    public void SetVisible(bool visible)
+    {
+        if (_notifyIcon.Visible != visible) _notifyIcon.Visible = visible;
     }
 
     /// <summary>显示一条“已最小化到托盘”气泡；提示失败不影响隐藏或退出流程。</summary>

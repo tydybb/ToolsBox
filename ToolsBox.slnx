@@ -19,5 +19,6 @@
     <Project Path="tests/ToolsBox.PlayerProbe/ToolsBox.PlayerProbe.csproj" />
     <Project Path="tests/ToolsBox.DouyinProbe/ToolsBox.DouyinProbe.csproj" />
     <Project Path="tests/ToolsBox.BangumiProbe/ToolsBox.BangumiProbe.csproj" />
+    <Project Path="tests/ToolsBox.AttendanceProbe/ToolsBox.AttendanceProbe.csproj" />
   </Folder>
 </Solution>

@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- 仅打卡可选功能使用：读取本机解密后的钉钉消息库。 -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.1" />
+  </ItemGroup>
+
 </Project>

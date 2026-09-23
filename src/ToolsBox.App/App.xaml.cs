@@ -11,6 +11,7 @@ namespace ToolsBox.App;
 
 public partial class App : Application
 {
+    private Attendance.AttendanceHost? _attendanceHost;
     private MainInstanceGate? _mainInstance;
     private System.Windows.Threading.DispatcherTimer? _activationTimer;
     protected override async void OnStartup(StartupEventArgs e)
@@ -18,6 +19,18 @@ public partial class App : Application
         // Helpers share this executable but must remain headless across awaits.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         base.OnStartup(e);
+
+        if(e.Args.Length==1 && e.Args[0]=="--attendance-agent")
+        {
+            try
+            {
+                if(!new Attendance.AttendanceStore().LoadOptions().Enabled){Shutdown(0);return;}
+                _attendanceHost=Attendance.AttendanceHost.Start();
+                if(_attendanceHost is null)Shutdown(0);
+            }
+            catch{Shutdown(1);}
+            return;
+        }
 
         if (e.Args.Length == 3 && e.Args[0] == "--web-resources")
         {
@@ -131,6 +144,6 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        _activationTimer?.Stop();_mainInstance?.Dispose();base.OnExit(e);
+        _activationTimer?.Stop();_mainInstance?.Dispose();_attendanceHost?.Dispose();base.OnExit(e);
     }
 }
