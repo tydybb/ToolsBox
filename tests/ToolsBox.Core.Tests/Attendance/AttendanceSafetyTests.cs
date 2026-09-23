@@ -46,10 +46,25 @@ public sealed class AttendanceSafetyTests
         try
         {
             foreach (string name in new[] { "a_v3", "b_v3" }) { Directory.CreateDirectory(Path.Combine(dir, name, "DBFiles")); File.WriteAllBytes(Path.Combine(dir, name, "DBFiles", "dingtalk.db"), new byte[16]); }
-            Assert.Null(new DingTalkDataLocator(new[] { dir }).Locate().Paths);
+            var located=new DingTalkDataLocator(new[] { dir }).Locate();
+            Assert.Null(located.Paths);
+            Assert.Equal(2,located.Candidates.Count);
             Assert.NotNull(new DingTalkDataLocator(new[] { Path.Combine(dir, "a_v3") }).Locate().Paths);
         }
         finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void ExpiredExplicitRootReportsSelectionGuidance()
+    {
+        string root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        try
+        {
+            Assert.Contains("已不存在", new DingTalkDataLocator(new[] { Path.Combine(root, "gone_v3") }).Locate().Error);
+            Directory.CreateDirectory(root);
+            Assert.Contains("不是钉钉账号数据目录", new DingTalkDataLocator(new[] { root }).Locate().Error);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
 
     [Fact]

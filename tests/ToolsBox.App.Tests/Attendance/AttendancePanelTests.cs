@@ -18,12 +18,13 @@ public class AttendancePanelTests
         return Task.CompletedTask;
     });
     [Fact]
-    public Task AutoDetectFillsPathWithoutSilentlySaving() => WpfTestThread.RunAsync(()=>
+    public Task FailedAutoDetectPreservesExistingInput() => WpfTestThread.RunAsync(()=>
     {
         string root=Path.Combine(Path.GetTempPath(),"ToolsBox-attendance-panel-"+Guid.NewGuid().ToString("N"));
         var store=new AttendanceStore(root);
-        var result=ToolsBox.Core.Attendance.DingTalkLocateResult.Found(new(@"C:\synthetic_v3","unused",null,"unused",null));
+        var result=ToolsBox.Core.Attendance.DingTalkLocateResult.Failed("未找到目录");
         var view=new AttendancePanel(store,_=>{},()=>{},()=>true,()=>result);
+        ((TextBox)view.FindName("AttendancePath")).Text=@"C:\synthetic_v3";
         ((Button)view.FindName("AttendanceDetect")).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
         Assert.Equal(@"C:\synthetic_v3",((TextBox)view.FindName("AttendancePath")).Text);
         Assert.Equal("",store.LoadOptions().AccountDirectory);

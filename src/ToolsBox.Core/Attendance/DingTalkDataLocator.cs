@@ -6,6 +6,7 @@ public sealed record DingTalkAccountPaths(string AccountDir, string DbPath, stri
 /// <summary>定位结果：命中账号目录，或给出明确失败原因（如仅发现旧版 _v2 数据）。</summary>
 public sealed record DingTalkLocateResult(DingTalkAccountPaths? Paths, string? Error)
 {
+    public IReadOnlyList<DingTalkAccountPaths> Candidates { get; init; } = Array.Empty<DingTalkAccountPaths>();
     public static DingTalkLocateResult Found(DingTalkAccountPaths paths) => new(paths, null);
     public static DingTalkLocateResult Failed(string error) => new(null, error);
 }
@@ -15,14 +16,19 @@ public sealed record DingTalkLocateResult(DingTalkAccountPaths? Paths, string? E
 /// 1) %APPDATA%\DingTalk 与 %APPDATA%\DingTalkLite 两个默认根；
 /// 2) 根下的 redirectAppData.dat 重定向（文件内容为路径，或本身是目录）；
 /// 3) 根（或重定向目标）下唯一的 *_v3 账号目录；多个账号必须由用户选择；
-/// 4) 仅发现旧版 *_v2 时明确报错，不猜测。
+/// 4) 仅发现旧版 *_v2 时明确报错，不猜测；
+/// 5) 显式指定的账号目录已失效或不对时，提示重新选择，不落到“请先安装钉钉”的默认文案。
 /// </summary>
 public sealed class DingTalkDataLocator
 {
     private readonly IReadOnlyList<string> _roots;
+    private readonly bool _explicitRoots;
 
     public DingTalkDataLocator(IEnumerable<string>? roots = null)
-        => _roots = (roots?.Where(root => !string.IsNullOrWhiteSpace(root)).ToArray() ?? DefaultRoots()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    {
+        _explicitRoots = roots is not null;
+        _roots = (roots?.Where(root => !string.IsNullOrWhiteSpace(root)).ToArray() ?? DefaultRoots()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
 
     /// <summary>默认候选根：%APPDATA% 下的钉钉目录族（含重定向解析）。</summary>
     public static IReadOnlyList<string> DefaultRoots()
@@ -86,10 +92,14 @@ public sealed class DingTalkDataLocator
             catch (UnauthorizedAccessException) { return DingTalkLocateResult.Failed("候选目录无访问权限，请直接选择账号数据目录。"); }
         }
         candidates = candidates.DistinctBy(paths => Path.GetFullPath(paths.AccountDir), StringComparer.OrdinalIgnoreCase).ToList();
-        if (candidates.Count > 1) return DingTalkLocateResult.Failed("发现多个钉钉账号，请明确选择账号数据目录。");
+        if (candidates.Count > 1) return DingTalkLocateResult.Failed("发现多个钉钉账号，请明确选择账号数据目录。") with { Candidates=candidates.OrderBy(p=>p.AccountDir,StringComparer.OrdinalIgnoreCase).ToArray() };
         if (candidates.Count == 1) return DingTalkLocateResult.Found(candidates[0]);
         if (sawLegacy)
             return DingTalkLocateResult.Failed("仅发现旧版钉钉数据目录（_v2），暂不支持解密，请升级钉钉后重试。");
+        if (_explicitRoots)
+            return DingTalkLocateResult.Failed(_roots.Any(Directory.Exists)
+                ? "所选目录不是钉钉账号数据目录，请重新选择。"
+                : "所选账号数据目录已不存在，请重新识别或手动选择。");
         return DingTalkLocateResult.Failed("未找到钉钉数据目录，请先安装并登录钉钉电脑版。");
     }
 

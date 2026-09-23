@@ -17,6 +17,7 @@ public sealed class AttendanceHost : IDisposable
     private readonly AttendanceStore _store = new();
     private readonly Mutex _instance;
     private readonly AttendanceCoordinator _coordinator;
+    private readonly AttendancePreviewWorker _preview;
     private readonly DispatcherTimer _timer;
     private readonly TrayIcon _tray;
     private AttendanceReminderWindow? _reminder;
@@ -32,6 +33,7 @@ public sealed class AttendanceHost : IDisposable
     private AttendanceHost(Mutex instance)
     {
         _instance=instance;
+        _preview=new AttendancePreviewWorker(_store,(directory,now)=>Task.Run(()=>new DingTalkAttendanceChecker(new DingTalkDataLocator([directory])).Check(now)));
         _coordinator=new AttendanceCoordinator(_store,(options,now)=>Task.Run(()=>
             new DingTalkAttendanceChecker(string.IsNullOrWhiteSpace(options.AccountDirectory)?null:new DingTalkDataLocator([options.AccountDirectory])).Check(now)));
         _coordinator.ReminderDue+=OnReminder;
@@ -57,6 +59,9 @@ public sealed class AttendanceHost : IDisposable
             _tray.SetVisible(!HasMainConsumer());
             var options=_store.LoadOptions();
             if(!options.Enabled){_reminder?.Close();Application.Current.Shutdown();return;}
+            // A malformed preview request must never disable the regular reminder loop.
+            try{if(!_suspended&&IsInteractiveDesktop())await _preview.TickAsync();}catch{ }
+            if(_disposed)return;
             bool interactive=!_suspended&&IsInteractiveDesktop();
             if(interactive&&!_interactive)_force=true;_interactive=interactive;
             if(!interactive || options.ManualConfirmedOn==DateOnly.FromDateTime(DateTime.Now) ||

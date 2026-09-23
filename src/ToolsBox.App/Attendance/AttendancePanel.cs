@@ -46,9 +46,22 @@ public sealed class AttendancePanel : UserControl
         var detect=Button("自动识别",()=>
         {
             var result=_locate();
-            if(result.Paths is not { } found){_settingsHint.Text=result.Error??"未找到账号目录，请手动选择。";return;}
-            _path.Text=found.AccountDir;
-            _settingsHint.Text="已识别并填入账号目录，请点击“保存设置”应用。多账号时不会自动猜测。";
+            var candidates=result.Paths is { } found ? new[]{found} : result.Candidates;
+            if(candidates.Count>0)
+            {
+                var picker=new AttendanceAccountPickerWindow(candidates,
+                    (directory,token)=>AttendancePreview.CheckAsync(_store,directory,_launch,token),
+                    (directory,preview)=>
+                    {
+                        AttendancePreview.Select(_store,directory,preview,DateTime.Now);
+                        _path.Text=directory;
+                        _settingsHint.Text="已保存所选目录；有效的今日打卡时间将按现有规则导入倒计时。";
+                        RefreshStatus();
+                    });
+                var owner=Window.GetWindow(this);if(owner is not null)picker.Owner=owner;
+                picker.ShowDialog();return;
+            }
+            _settingsHint.Text=result.Error??"未找到账号目录，请手动选择。";
         });
         RegisterName("AttendanceDetect",detect);
         DockPanel.SetDock(browse,Dock.Right);paths.Children.Add(browse);

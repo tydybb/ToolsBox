@@ -35,6 +35,10 @@ public sealed class AttendanceStore
     public AttendanceOptions LoadOptions() => Read<AttendanceOptions>("options.json") ?? new();
     public AttendanceSnapshot? LoadSnapshot() => Read<AttendanceSnapshot>("status.json");
     public void SaveSnapshot(AttendanceSnapshot value) => Write("status.json", value);
+    public AttendancePreviewRequest? LoadPreviewRequest()=>Read<AttendancePreviewRequest>("preview-request.json");
+    public AttendancePreviewResult? LoadPreviewResult()=>Read<AttendancePreviewResult>("preview-result.json");
+    public void SavePreviewRequest(AttendancePreviewRequest value)=>Write("preview-request.json",value);
+    public void SavePreviewResult(AttendancePreviewResult value)=>Write("preview-result.json",value);
     public void Update(Func<AttendanceOptions, AttendanceOptions> change)
     {
         using var mutex = new Mutex(false, _mutexName);

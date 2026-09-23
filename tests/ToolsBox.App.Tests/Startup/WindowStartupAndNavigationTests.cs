@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -12,10 +13,13 @@ public sealed class WindowStartupAndNavigationTests
     public Task StartupResources_DoNotOpenHelperWindow_AndNavigationTracksCurrentPage() =>
         WpfTestThread.RunAsync(async () =>
         {
-            var app = new App();
-            app.InitializeComponent();
-            // Async helper startup must not leave an automatic window launch queued by WPF.
-            Assert.Null(app.StartupUri);
+            // 禁止在测试进程 new App()：阶段探针证实，任何 Application 实例一经创建（无论其
+            // Dispatcher 存活、单例已反射清空还是线程已退出），都会静默毒化本进程随后其他测试
+            // 线程的 Window.Show()——AttendanceAccountPickerTests 的 owner 拿不到窗口源、设置
+            // Owner 抛“之前未显示”；从不创建则一切正常。
+            // Async helper startup must not leave an automatic window launch queued by WPF：
+            // 等价断言改为直接检查 App.xaml 未声明 StartupUri（StartupUri 只可能来自该声明）。
+            AssertAppXamlDeclaresNoStartupUri();
             using var countdownModel = new ToolsBox.App.WorkCountdown.WorkCountdownViewModel(
                 () => new DateTime(2026, 9, 18, 9, 0, 0), new EmptyCountdownStore(), false);
             var window = new MainWindow(countdownModel, _ => { });
@@ -60,6 +64,22 @@ public sealed class WindowStartupAndNavigationTests
                 window.Close();
             }
         });
+
+    /// <summary>从仓库源码定位 src/ToolsBox.App/App.xaml 并断言根元素未声明 StartupUri（无需创建 Application 实例）。</summary>
+    private static void AssertAppXamlDeclaresNoStartupUri()
+    {
+        string? directory = AppContext.BaseDirectory;
+        string? path = null;
+        while (!string.IsNullOrWhiteSpace(directory))
+        {
+            string candidate = Path.Combine(directory, "src", "ToolsBox.App", "App.xaml");
+            if (File.Exists(candidate)) { path = candidate; break; }
+            directory = Path.GetDirectoryName(directory);
+        }
+        Assert.NotNull(path);
+        var document = System.Xml.Linq.XDocument.Load(path!);
+        Assert.Null(document.Root?.Attribute("StartupUri"));
+    }
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
     private static extern int GetWindowLong(IntPtr window, int index);
