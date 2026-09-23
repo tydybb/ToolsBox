@@ -11,6 +11,8 @@ namespace ToolsBox.App;
 
 public partial class App : Application
 {
+    private MainInstanceGate? _mainInstance;
+    private System.Windows.Threading.DispatcherTimer? _activationTimer;
     protected override async void OnStartup(StartupEventArgs e)
     {
         // Helpers share this executable but must remain headless across awaits.
@@ -105,8 +107,30 @@ public partial class App : Application
             return;
         }
 
+        try
+        {
+            _mainInstance=MainInstanceGate.Acquire("Local\\ToolsBox.MainWindow."+identity.User!.Value);
+            if(_mainInstance is null){Shutdown(0);return;}
+        }
+        catch
+        {
+            MessageBox.Show("无法确认工具箱是否已运行，请先退出已有工具箱后重试。","宝哥工具箱");
+            Shutdown(1);return;
+        }
         ShutdownMode = ShutdownMode.OnMainWindowClose;
         MainWindow = new MainWindow();
         MainWindow.Show();
+        _activationTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(500)};
+        _activationTimer.Tick+=(_,_)=>
+        {
+            if(_mainInstance?.ConsumeActivation()!=true || MainWindow is null)return;
+            MainWindow.Show();MainWindow.WindowState=WindowState.Normal;MainWindow.Activate();
+        };
+        _activationTimer.Start();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _activationTimer?.Stop();_mainInstance?.Dispose();base.OnExit(e);
     }
 }
