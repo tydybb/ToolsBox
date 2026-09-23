@@ -38,6 +38,8 @@ public sealed class WindowStartupAndNavigationTests
                 var countdown = Assert.IsAssignableFrom<ToggleButton>(window.FindName("CountdownNavigation"));
                 var web = Assert.IsAssignableFrom<ToggleButton>(window.FindName("WebResourcesNavigation"));
                 Assert.Same(ports.Style, web.Style);
+                Assert.Matches(@"^v\d+\.\d+\.\d+",
+                    Assert.IsAssignableFrom<System.Windows.Controls.TextBlock>(window.FindName("VersionLabel")).Text);
                 ToggleButton[] buttons = [ports, files, network, countdown, web];
                 object[] pages = [vm.PortMonitor, vm.FileUnlocker, vm.NetworkTraffic,
                     vm.GetType().GetProperty("WorkCountdown")!.GetValue(vm)!,

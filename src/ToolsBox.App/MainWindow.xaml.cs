@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Reflection;
 using ToolsBox.App.FileUnlocking;
 using ToolsBox.App.Ports;
 using ToolsBox.App.NetworkTraffic;
@@ -60,6 +61,9 @@ public partial class MainWindow : Window
     {
         ArgumentNullException.ThrowIfNull(countdown);
         InitializeComponent();
+        // 左下角版本号取自 csproj <Version>（较大改动时递增）；SourceLink 可能附加 +hash，不展示。
+        VersionLabel.Text = "v" + ((typeof(MainWindow).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion ?? "0.0.0").Split('+')[0]);
         _showOffWorkReminder = showReminder ?? ShowOffWorkReminder;
         _showWorkFinished = showFinished ?? ShowWorkFinished;
         var networkClient = new ElevatedNetworkClient();

@@ -82,7 +82,10 @@
                              Click="OpenWebResources" VerticalAlignment="Top">
                     <StackPanel Orientation="Horizontal"><TextBlock Text="↗" Foreground="#8FC1FF" Margin="0,0,10,0"/><TextBlock Text="网页资源下载" FontWeight="SemiBold"/></StackPanel>
                 </RadioButton>
-                <TextBlock Grid.Row="6" Text="更多工具将逐步加入" Foreground="#728597" FontSize="11"/>
+                <StackPanel Grid.Row="6">
+                    <TextBlock Text="更多工具将逐步加入" Foreground="#728597" FontSize="11"/>
+                    <TextBlock x:Name="VersionLabel" Foreground="#5A6C7D" FontSize="11" Margin="0,6,0,0"/>
+                </StackPanel>
             </Grid>
         </Border>
         <ContentControl Grid.Column="1" Content="{Binding CurrentTool}"/>

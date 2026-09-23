@@ -30,6 +30,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Title>宝哥工具箱</Title>
     <Product>宝哥工具箱</Product>
+    <!-- 版本号：较大改动时递增（年.月.日，同日多次改动加第四位 .1/.2），主窗口左下角显示为 v+该值。 -->
+    <Version>2026.9.23</Version>
     <Description>面向 Windows 的端口监控与文件解除占用工具箱</Description>
   </PropertyGroup>
 
