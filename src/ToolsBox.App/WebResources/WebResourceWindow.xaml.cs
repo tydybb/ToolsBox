@@ -31,6 +31,7 @@ public partial class WebResourceWindow : Window
     private readonly CancellationTokenSource _lifetime = new();
     private readonly HashSet<Task> _operations = [];
     private bool _forceClose;
+    internal void CloseForToolboxExit(){_forceClose=true;Close();}
     private bool _cleanupComplete;
     private bool _closing, _closed, _browserInitializing;
     private EnvironmentWindow? _environmentWindow;

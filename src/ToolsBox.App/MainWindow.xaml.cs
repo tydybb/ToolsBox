@@ -25,6 +25,8 @@ public partial class MainWindow : Window
     // 用户点 X / Alt+F4 经由 Win32 WM_CLOSE 送达；程序化 Close() 不经过该消息。
     private bool _closeFromUser;
     private bool _trayExit;
+    private bool _entireToolboxExit;
+    internal void PrepareForEntireToolboxExit(){_entireToolboxExit=true;_trayExit=true;}
     private bool _trayTipShown;
     private Attendance.AttendanceMainIntegration? _attendance;
 
@@ -99,7 +101,7 @@ public partial class MainWindow : Window
             }
             try
             {
-                if (_webResourceProcess is { HasExited: false } &&
+                if (!_entireToolboxExit && _webResourceProcess is { HasExited: false } &&
                     MessageBox.Show(this, "网页资源窗口仍在运行。退出工具箱会关闭该窗口并取消未完成的下载，确定退出？", "退出宝哥工具箱", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
                     args.Cancel = true;
             }
@@ -142,6 +144,7 @@ public partial class MainWindow : Window
 
     private void ExitFromTray()
     {
+        if(Application.Current is App app && app.ExitEntireToolbox())return;
         _trayExit = true;
         Close();
     }

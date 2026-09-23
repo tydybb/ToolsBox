@@ -12,6 +12,31 @@ namespace ToolsBox.App;
 public partial class App : Application
 {
     private Attendance.AttendanceHost? _attendanceHost;
+    private ToolboxExitChannel? _exitChannel;
+    private System.Threading.Timer? _exitWatcher;
+    private System.Threading.Timer? _exitDeadline;
+    private int _exitStarted;
+    /// <returns>false：协调退出通道未初始化（如测试宿主未跑 OnStartup），由调用方回退本地退出；true：已发起协调退出或已报错中止。</returns>
+    public bool ExitEntireToolbox()
+    {
+        if(_exitChannel is null)return false;
+        try{_exitChannel.RequestExit();BeginCoordinatedExit();}
+        catch(Exception){MessageBox.Show("无法通知其他工具箱进程退出，请重试。","退出失败");}
+        return true;
+    }
+    private void BeginCoordinatedExit()
+    {
+        if(Interlocked.Exchange(ref _exitStarted,1)!=0)return;
+        // Only terminate this process if its own normal cleanup is stuck; never enumerate/kill other apps.
+        _exitDeadline=new System.Threading.Timer(_=>{using var self=Process.GetCurrentProcess();self.Kill();},null,TimeSpan.FromSeconds(10),Timeout.InfiniteTimeSpan);
+        Dispatcher.BeginInvoke(()=>
+        {
+            // Close the main window directly: Shutdown() alone can skip OnClosed cleanup (tray icon, view-models).
+            if(MainWindow is MainWindow main){main.PrepareForEntireToolboxExit();main.Close();return;}
+            if(MainWindow is WebResources.WebResourceWindow browser){browser.CloseForToolboxExit();return;}
+            Shutdown();
+        });
+    }
     private MainInstanceGate? _mainInstance;
     private System.Windows.Threading.DispatcherTimer? _activationTimer;
     protected override async void OnStartup(StartupEventArgs e)
@@ -19,6 +44,11 @@ public partial class App : Application
         // Helpers share this executable but must remain headless across awaits.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         base.OnStartup(e);
+        if(e.Args.Length==0 || e.Args.Contains("--administrator-start") || e.Args.Contains("--attendance-agent") || e.Args.Contains("--web-resources"))
+        {
+            _exitChannel=new ToolboxExitChannel();
+            _exitWatcher=new System.Threading.Timer(_=>{if(_exitChannel.ShouldExit())BeginCoordinatedExit();},null,500,500);
+        }
 
         if(e.Args.Length==1 && e.Args[0]=="--attendance-agent")
         {
@@ -144,6 +174,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _exitWatcher?.Dispose();
         _activationTimer?.Stop();_mainInstance?.Dispose();_attendanceHost?.Dispose();base.OnExit(e);
     }
 }

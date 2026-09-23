@@ -37,7 +37,7 @@ public sealed class AttendanceHost : IDisposable
         _coordinator=new AttendanceCoordinator(_store,(options,now)=>Task.Run(()=>
             new DingTalkAttendanceChecker(string.IsNullOrWhiteSpace(options.AccountDirectory)?null:new DingTalkDataLocator([options.AccountDirectory])).Check(now)));
         _coordinator.ReminderDue+=OnReminder;
-        _tray=new TrayIcon(ShowSettings,()=>Application.Current.Shutdown(),visible:!HasMainConsumer());
+        _tray=new TrayIcon(ShowSettings,()=>{if(Application.Current is App app && app.ExitEntireToolbox())return;Application.Current.Shutdown();},visible:!HasMainConsumer());
         _timer=new DispatcherTimer{Interval=TimeSpan.FromSeconds(2)};_timer.Tick+=OnTick;
         SystemEvents.SessionSwitch+=OnSession;SystemEvents.PowerModeChanged+=OnPower;
         _timer.Start();

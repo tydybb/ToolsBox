@@ -19,7 +19,7 @@ internal sealed class TrayIcon : IDisposable
         _menu = new System.Windows.Forms.ContextMenuStrip();
         _menu.Items.Add("打开宝哥工具箱(&O)", null, (_, _) => restore());
         _menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-        _menu.Items.Add("退出(&X)", null, (_, _) => exit());
+        _menu.Items.Add("退出整个工具箱（含打卡提醒）(&X)", null, (_, _) => exit());
         _notifyIcon = new System.Windows.Forms.NotifyIcon
         {
             Text = "宝哥工具箱",
