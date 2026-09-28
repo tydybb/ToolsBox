@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using ToolsBox.App.Views;
 using ToolsBox.App.WorkCountdown;
 
 namespace ToolsBox.App.Tests.Startup;
@@ -96,6 +97,67 @@ public sealed class OffWorkReminderTests
             now = now.AddMinutes(1);
             vm.Refresh();
             Assert.Equal("00:07:00", vm.ElapsedText);
+        }
+        finally { window.Close(); }
+    });
+
+    [Fact]
+    public Task FinishButton_MatchesCountdownButton_AndFinishingClosesReminder() => WpfTestThread.RunAsync(async () =>
+    {
+        DateTime now = new(2026, 9, 18, 21, 5, 0);
+        using var vm = new WorkCountdownViewModel(() => now, new EmptyStore(), false);
+        vm.StartTimeText = "0930";
+        vm.OvertimeText = "2";
+        vm.StartCommand.Execute(null);
+        Assert.True(vm.IsOverdue);
+        var window = new OffWorkReminderWindow(vm);
+        bool closed = false;
+        window.Closed += (_, _) => closed = true;
+        try
+        {
+            window.Measure(new Size(520, 320));
+            window.Arrange(new Rect(0, 0, 520, 320));
+            window.UpdateLayout();
+            var content = Assert.IsAssignableFrom<FrameworkElement>(window.Content);
+            content.Measure(new Size(520, 320));
+            content.Arrange(new Rect(0, 0, 520, 320));
+            content.UpdateLayout();
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+
+            // 与倒计时卡片上的“下班”按钮完全一致：同名、同命令、同文案。
+            var button = Assert.IsType<Button>(window.FindName("FinishWorkButton"));
+            Assert.Equal("下班", button.Content);
+            Assert.Same(vm.FinishCommand, button.Command);
+            Assert.True(button.IsEnabled);
+
+            button.Command.Execute(null);
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+
+            Assert.True(vm.IsFinished);
+            Assert.Equal(now, vm.FinishedAt);
+            Assert.True(closed);
+            Assert.False(window.IsVisible);
+        }
+        finally { window.Close(); }
+    });
+
+    [Fact]
+    public Task FinishButton_IsDisabledBeforeCountdownStarts() => WpfTestThread.RunAsync(async () =>
+    {
+        using var vm = new WorkCountdownViewModel(() => new(2026, 9, 18, 9, 30, 0), new EmptyStore(), false);
+        var window = new OffWorkReminderWindow(vm);
+        try
+        {
+            window.Measure(new Size(520, 320));
+            window.Arrange(new Rect(0, 0, 520, 320));
+            var content = Assert.IsAssignableFrom<FrameworkElement>(window.Content);
+            content.Measure(new Size(520, 320));
+            content.Arrange(new Rect(0, 0, 520, 320));
+            content.UpdateLayout();
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+
+            var button = Assert.IsType<Button>(window.FindName("FinishWorkButton"));
+            Assert.False(button.IsEnabled);
         }
         finally { window.Close(); }
     });

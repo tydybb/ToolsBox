@@ -39,8 +39,30 @@
             </TextBlock>
         </StackPanel>
 
-        <Button x:Name="DismissButton" Grid.Row="4" Content="关闭" Width="110" Height="36"
-                HorizontalAlignment="Right" Background="#0078D7" Foreground="White"
-                BorderBrush="White" BorderThickness="1" Click="OnDismiss"/>
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="FinishWorkButton" Content="下班" Command="{Binding FinishCommand}"
+                    Width="110" Height="36" Margin="0,0,12,0" BorderThickness="1"
+                    ToolTip="结束本次计时，并记录实际下班时间">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="#16794B"/>
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="BorderBrush" Value="#16794B"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#E4E7EB"/>
+                                <Setter Property="Foreground" Value="#637381"/>
+                                <Setter Property="BorderBrush" Value="#CBD2D9"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <Button x:Name="DismissButton" Content="关闭" Width="110" Height="36"
+                    Background="#0078D7" Foreground="White"
+                    BorderBrush="White" BorderThickness="1" Click="OnDismiss"/>
+        </StackPanel>
     </Grid>
 </Window>
