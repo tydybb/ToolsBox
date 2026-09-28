@@ -75,6 +75,81 @@ public sealed class WorkCountdownFlavorTests
         Assert.True(raised);
     }
 
+    [Fact]
+    public void FlavorText_RestDayWithOvertimeTask_UsesOvertimeVoiceNotWeekendLaze()
+    {
+        // 2026-11-14 是周六休息日（默认加班 4 小时）：不能显示“睡到自然醒”。
+        using var vm = new WorkCountdownViewModel(() => new(2026, 11, 14, 9, 30, 0), new EmptyStore(), false);
+        vm.StartTimeText = "09:30";
+        vm.StartCommand.Execute(null);
+        Assert.True(vm.HasOvertime);
+        Assert.Contains("班", vm.FlavorText);
+        Assert.DoesNotContain("自然醒", vm.FlavorText);
+        Assert.DoesNotContain("赖床", vm.FlavorText);
+    }
+
+    [Fact]
+    public void FlavorText_WeekdayWithPlannedOvertime_UsesOvertimeVoiceNotWeekdayCopy()
+    {
+        // 2026-11-11 是周三，但同屏有计划加班：不能显示“胜利在望”。
+        using var vm = new WorkCountdownViewModel(() => new(2026, 11, 11, 9, 30, 0), new EmptyStore(), false);
+        vm.StartTimeText = "09:30";
+        vm.OvertimeText = "2";
+        vm.StartCommand.Execute(null);
+        Assert.True(vm.HasOvertime);
+        Assert.Contains("班", vm.FlavorText);
+        Assert.DoesNotContain("周三", vm.FlavorText);
+        Assert.DoesNotContain("胜利在望", vm.FlavorText);
+    }
+
+    [Fact]
+    public void FlavorText_OverdueWithoutPlannedOvertime_UsesOvertimeVoice()
+    {
+        // 计划加班为 0 但已进入无偿加班：也不能显示快乐星期文案。
+        DateTime now = new(2026, 11, 11, 9, 30, 0);
+        using var vm = new WorkCountdownViewModel(() => now, new EmptyStore(), false);
+        vm.StartTimeText = "09:30";
+        vm.OvertimeText = "0";
+        vm.StartCommand.Execute(null);
+        Assert.False(vm.HasOvertime);
+        Assert.DoesNotContain("加班", vm.FlavorText);
+
+        now = vm.Schedule!.End.AddMinutes(10);
+        vm.Refresh();
+        Assert.True(vm.IsOverdue);
+        Assert.Contains("班", vm.FlavorText);
+        Assert.DoesNotContain("胜利在望", vm.FlavorText);
+    }
+
+    [Fact]
+    public void FlavorText_AfterFinishWithOvertime_SwitchesBackToOffWorkVoice()
+    {
+        DateTime now = new(2026, 11, 14, 9, 30, 0);
+        using var vm = new WorkCountdownViewModel(() => now, new EmptyStore(), false);
+        vm.StartTimeText = "09:30";
+        vm.StartCommand.Execute(null);
+        Assert.Contains("班", vm.FlavorText);
+
+        now = vm.Schedule!.End.AddMinutes(5);
+        vm.FinishCommand.Execute(null);
+
+        Assert.True(vm.IsFinished);
+        Assert.Contains("周六", vm.FlavorText);
+        Assert.DoesNotContain("命苦", vm.FlavorText);
+    }
+
+    [Fact]
+    public void FlavorText_DuringHolidayWithOvertime_KeepsHolidayVoice()
+    {
+        // 节日文案已改为同方向的加班吐槽，仍优先于加班兜底。
+        using var vm = new WorkCountdownViewModel(() => new(2026, 10, 3, 9, 30, 0), new EmptyStore(), false);
+        vm.StartTimeText = "09:30";
+        vm.StartCommand.Execute(null);
+        Assert.True(vm.HasOvertime);
+        Assert.Contains("假期第 3 天", vm.FlavorText);
+        Assert.Contains("我在加班", vm.FlavorText);
+    }
+
     private sealed class EmptyStore : ICountdownStateStore
     {
         public CountdownState? Load() => null;

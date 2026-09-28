@@ -3,7 +3,7 @@ namespace ToolsBox.Core.WorkCountdown;
 public enum HolidayMomentKind
 {
     None,
-    /// <summary>当天正在法定假期内（如假期中仍坚守岗位）。</summary>
+    /// <summary>当天正在法定假期内（用户前提：假日还开软件就是在加班）。</summary>
     DuringHoliday,
     /// <summary>节前最后一个工作日，次日即假期首日。</summary>
     HolidayEve,
@@ -73,8 +73,8 @@ public static class HolidayFunCopy
     public static string Countdown(HolidayMoment moment) => moment.Kind switch
     {
         HolidayMomentKind.DuringHoliday => moment.DaysLeft == 0
-            ? $"{moment.Name}假期最后一天，余额告急，且休且珍惜！"
-            : $"{moment.Name}假期第 {moment.Days} 天仍在坚守，余额还剩 {moment.DaysLeft} 天，致敬打工人！",
+            ? $"{moment.Name}假期最后一天，别人收心等开工，我收心继续加班，命苦"
+            : $"{moment.Name}假期第 {moment.Days} 天，别人在旅游，我在加班，命苦，假期余额还剩 {moment.DaysLeft} 天",
         HolidayMomentKind.HolidayEve => $"明天开始{moment.Name}假期，今天是节前最后一个工作日，冲！",
         HolidayMomentKind.MakeupWorkday => moment.Name.Length == 0
             ? "今天是调休补班日，为长假充值中，值！"
@@ -89,8 +89,8 @@ public static class HolidayFunCopy
     public static string OffWork(HolidayMoment moment) => moment.Kind switch
     {
         HolidayMomentKind.DuringHoliday => moment.DaysLeft == 0
-            ? $"{moment.Name}假期最后一天收工，假期圆满，明天见！"
-            : $"{moment.Name}假期第 {moment.Days} 天收工，余额还剩 {moment.DaysLeft} 天，好好休息！",
+            ? $"{moment.Name}假期最后一天收工，别人的假期结束了，我的班也加完了，命苦"
+            : $"{moment.Name}假期第 {moment.Days} 天收工，别人放假我加班，假期余额还剩 {moment.DaysLeft} 天，命苦",
         HolidayMomentKind.HolidayEve => $"下班即放假，{moment.Name}假期我来啦！",
         HolidayMomentKind.MakeupWorkday => moment.Name.Length == 0
             ? "补班日准点收工，这班补得值！"

@@ -124,4 +124,22 @@ public sealed class HolidayFunCopyTests
         var makeup = new HolidayMoment(HolidayMomentKind.MakeupWorkday, "", 0, 0, "");
         Assert.Equal("补班日准点收工，这班补得值！", HolidayFunCopy.OffWork(makeup));
     }
+
+    [Fact]
+    public void DuringHoliday_ComplainsAboutWorkingThroughHoliday_InsteadOfPraisingIt()
+    {
+        var moment = new HolidayMoment(HolidayMomentKind.DuringHoliday, "国庆节", 3, 4, "");
+
+        string countdown = HolidayFunCopy.Countdown(moment);
+        Assert.Contains("我在加班", countdown);
+        Assert.Contains("命苦", countdown);
+        Assert.DoesNotContain("致敬", countdown);
+        Assert.DoesNotContain("好好休息", countdown);
+
+        string offWork = HolidayFunCopy.OffWork(moment);
+        Assert.Contains("我加班", offWork);
+        Assert.Contains("命苦", offWork);
+        Assert.DoesNotContain("好好休息", offWork);
+        Assert.DoesNotContain("假期圆满", offWork);
+    }
 }

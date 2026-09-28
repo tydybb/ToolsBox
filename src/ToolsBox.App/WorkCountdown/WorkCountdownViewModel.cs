@@ -177,7 +177,9 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// 趣味文案：倒计时阶段用“倒计时语气”，下班后切换为“收工语气”。
-    /// 优先节日场景（假期中 / 节前 / 调休 / 节后 / 7 天内倒计时），无节日气氛时兜底为周一至周日的星期文案。
+    /// 优先节日场景（假期中 / 节前 / 调休 / 节后 / 7 天内倒计时）；
+    /// 无节日气氛且有加班任务在跑（或已无偿加班）时用加班语气，避免躺平文案与加班提示同屏打架；
+    /// 两者皆无时兜底为周一至周日的星期文案。
     /// </summary>
     public string FlavorText
     {
@@ -187,9 +189,13 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
             HolidayMoment moment = HolidayFunCopy.Detect(date);
             string holiday = IsFinished ? HolidayFunCopy.OffWork(moment) : HolidayFunCopy.Countdown(moment);
             if (holiday.Length > 0) return holiday;
+            if (IsOvertimeFlavorActive) return OvertimeFunCopy.Countdown(date);
             return IsFinished ? WeekdayFunCopy.OffWork(date) : WeekdayFunCopy.Countdown(date);
         }
     }
+
+    /// <summary>倒计时未结束且有加班任务在跑、或已进入无偿加班状态。</summary>
+    private bool IsOvertimeFlavorActive => !IsFinished && _schedule is not null && (HasOvertime || IsOverdue);
 
     public bool HasFlavor => FlavorText.Length > 0;
 
