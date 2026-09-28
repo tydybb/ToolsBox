@@ -16,12 +16,12 @@
         <TextBlock x:Name="WarningTitle" Grid.Row="0" Text="即将关机" Foreground="White" FontSize="28" FontWeight="SemiBold"/>
         <StackPanel Grid.Row="1">
             <TextBlock x:Name="ReminderMessage" Text="你已经下班，我要把你电脑关了" Foreground="White" FontSize="18" TextWrapping="Wrap" Margin="0,12,0,0"/>
-            <TextBlock x:Name="HolidayFunText" Text="{Binding HolidayFunText}" Foreground="#FFE9A8" FontSize="15" TextWrapping="Wrap" Margin="0,8,0,0">
+            <TextBlock x:Name="FlavorText" Text="{Binding FlavorText}" Foreground="#FFE9A8" FontSize="15" TextWrapping="Wrap" Margin="0,8,0,0">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Setter Property="Visibility" Value="Visible"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding HasHolidayFun}" Value="False">
+                            <DataTrigger Binding="{Binding HasFlavor}" Value="False">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
                         </Style.Triggers>

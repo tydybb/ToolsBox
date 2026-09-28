@@ -175,17 +175,23 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
         IsOverdue ? "你已无偿加班" :
         _currentTime < _schedule.Start ? "尚未到上班时间，显示距离预计下班的时间" : "距离预计下班";
 
-    /// <summary>按节假日生成的趣味文案：倒计时阶段用“倒计时语气”，下班后切换为“收工语气”；无节日气氛时为空串。</summary>
-    public string HolidayFunText
+    /// <summary>
+    /// 趣味文案：倒计时阶段用“倒计时语气”，下班后切换为“收工语气”。
+    /// 优先节日场景（假期中 / 节前 / 调休 / 节后 / 7 天内倒计时），无节日气氛时兜底为周一至周日的星期文案。
+    /// </summary>
+    public string FlavorText
     {
         get
         {
-            HolidayMoment moment = HolidayFunCopy.Detect(DateOnly.FromDateTime(DisplayTime));
-            return IsFinished ? HolidayFunCopy.OffWork(moment) : HolidayFunCopy.Countdown(moment);
+            DateOnly date = DateOnly.FromDateTime(DisplayTime);
+            HolidayMoment moment = HolidayFunCopy.Detect(date);
+            string holiday = IsFinished ? HolidayFunCopy.OffWork(moment) : HolidayFunCopy.Countdown(moment);
+            if (holiday.Length > 0) return holiday;
+            return IsFinished ? WeekdayFunCopy.OffWork(date) : WeekdayFunCopy.Countdown(date);
         }
     }
 
-    public bool HasHolidayFun => HolidayFunText.Length > 0;
+    public bool HasFlavor => FlavorText.Length > 0;
 
     public void Refresh()
     {
@@ -359,7 +365,7 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
             nameof(OvertimeMessage), nameof(RemainingText), nameof(IsOverdue), nameof(ElapsedText), nameof(TimerText),
             nameof(StatusText), nameof(IsFinished), nameof(FinishedAt), nameof(IsEarlyDeparture),
             nameof(HasIncompleteOvertime), nameof(FinishMessage), nameof(FinishDetails), nameof(FinishedTimerLabel),
-            nameof(HolidayFunText), nameof(HasHolidayFun) }) OnPropertyChanged(property);
+            nameof(FlavorText), nameof(HasFlavor) }) OnPropertyChanged(property);
         FinishCommand.RaiseCanExecuteChanged();
     }
 

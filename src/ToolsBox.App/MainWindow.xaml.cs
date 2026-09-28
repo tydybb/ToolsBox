@@ -159,8 +159,8 @@ public partial class MainWindow : Window
 
     private void ShowWorkFinished(WorkCountdownViewModel countdown)
     {
-        string holiday = countdown.HasHolidayFun ? $"\n{countdown.HolidayFunText}" : "";
-        MessageBox.Show(this, $"{countdown.FinishMessage}{holiday}\n\n{countdown.FinishDetails}", "下班提醒",
+        string flavor = countdown.HasFlavor ? $"\n{countdown.FlavorText}" : "";
+        MessageBox.Show(this, $"{countdown.FinishMessage}{flavor}\n\n{countdown.FinishDetails}", "下班提醒",
             MessageBoxButton.OK, countdown.IsEarlyDeparture ? MessageBoxImage.Warning : MessageBoxImage.Information);
     }
 
