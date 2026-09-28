@@ -1,5 +1,10 @@
 namespace ToolsBox.Core.WorkCountdown;
 
+/// <param name="Name">假期名称，如“国庆节”。</param>
+/// <param name="Start">假期第一天（含）。</param>
+/// <param name="End">假期最后一天（含）。</param>
+public readonly record struct HolidaySpan(string Name, DateOnly Start, DateOnly End);
+
 public static class ChinaWorkCalendar
 {
     // 国务院办公厅关于2026年部分节假日安排的通知：
@@ -37,4 +42,33 @@ public static class ChinaWorkCalendar
             ? new DayClassification(DayKind.RestDay, "周末休息日")
             : new DayClassification(DayKind.Workday, "工作日");
     }
+
+    /// <summary>指定日期正落在哪个法定假期内；不是假期或年份无数据返回 null。</summary>
+    public static HolidaySpan? GetHolidayAt(DateOnly date)
+    {
+        if (date.Year != 2026) return null;
+        foreach (var holiday in Holidays)
+            if (date.Month == holiday.Month && date.Day >= holiday.First && date.Day <= holiday.Last)
+                return new HolidaySpan(holiday.Name, new DateOnly(date.Year, holiday.Month, holiday.First),
+                    new DateOnly(date.Year, holiday.Month, holiday.Last));
+        return null;
+    }
+
+    /// <summary>指定日期之后（Start 严格大于当天）最近开始的假期；年内无假期或年份无数据返回 null。</summary>
+    public static HolidaySpan? NextHolidayAfter(DateOnly date)
+    {
+        if (date.Year != 2026) return null;
+        HolidaySpan? best = null;
+        foreach (var holiday in Holidays)
+        {
+            var start = new DateOnly(date.Year, holiday.Month, holiday.First);
+            if (start <= date) continue;
+            if (best is null || start < best.Value.Start)
+                best = new HolidaySpan(holiday.Name, start, new DateOnly(date.Year, holiday.Month, holiday.Last));
+        }
+        return best;
+    }
+
+    /// <summary>是否为国务院安排的调休补班日。</summary>
+    public static bool IsMakeupWorkday(DateOnly date) => date.Year == 2026 && MakeupWorkdays.Contains(date);
 }
