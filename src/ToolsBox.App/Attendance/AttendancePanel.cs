@@ -23,6 +23,7 @@ public sealed class AttendancePanel : UserControl
     private readonly TextBox _path=new(){MinWidth=150,ToolTip="留空自动定位；多个账号时请直接选择本人账号目录（含 DBFiles 的目录）"};
     private readonly TextBlock _status=new(){TextWrapping=TextWrapping.Wrap,Foreground=Brushes.DimGray,Margin=new Thickness(0,10,0,0)};
     private readonly ComboBox _day=new(){ItemsSource=new[]{"今日：按日历","今日：需要提醒（工作日）","今日：不提醒（休息日）"}};
+    private readonly StackPanel _details=new();
     private readonly DispatcherTimer _timer=new(){Interval=TimeSpan.FromSeconds(3)};
     public AttendancePanel() : this(new AttendanceStore(),AttendanceStartup.SetEnabled,LaunchHost,null) { }
     public AttendancePanel(AttendanceStore store,Action<bool> startup,Action launch,Func<bool>? consent,Func<DingTalkLocateResult>? locate=null)
@@ -32,15 +33,16 @@ public sealed class AttendancePanel : UserControl
         _consent=consent??(()=>MessageBox.Show(ConsentText,"启用打卡提醒",MessageBoxButton.YesNo,MessageBoxImage.Information,MessageBoxResult.No)==MessageBoxResult.Yes);
         NameScope.SetNameScope(this,new NameScope());RegisterName("AttendanceEnabled",_enabled);RegisterName("AttendanceStatus",_status);
         RegisterName("AttendancePath",_path);
-        var panel=new StackPanel();panel.Children.Add(_enabled);
-        RegisterName("AttendanceStartupStatus",_startupStatus);panel.Children.Add(_startupStatus);
+        var panel=new StackPanel();panel.Children.Add(_enabled);panel.Children.Add(_details);
+        RegisterName("AttendanceDetails",_details);
+        RegisterName("AttendanceStartupStatus",_startupStatus);_details.Children.Add(_startupStatus);
         var startupSettings=Button("打开 Windows 启动设置",()=>
         {
             using var process=System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("ms-settings:startupapps"){UseShellExecute=true});
         });
-        RegisterName("AttendanceStartupSettings",startupSettings);panel.Children.Add(startupSettings);
-        panel.Children.Add(new TextBlock{Text="仅工作日 / 调休补班；启动、解锁、唤醒检查＋5 分钟轮询。手动确认不会生成打卡时间。",TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,8,0,10)});
-        panel.Children.Add(new TextBlock{Text="钉钉账号数据目录（留空自动定位，不是安装目录）"});
+        RegisterName("AttendanceStartupSettings",startupSettings);_details.Children.Add(startupSettings);
+        _details.Children.Add(new TextBlock{Text="仅工作日 / 调休补班；启动、解锁、唤醒检查＋5 分钟轮询。手动确认不会生成打卡时间。",TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,8,0,10)});
+        _details.Children.Add(new TextBlock{Text="钉钉账号数据目录（留空自动定位，不是安装目录）"});
         var paths=new DockPanel{Margin=new Thickness(0,6,0,8)};
         var browse=Button("选择目录",()=>{var dialog=new OpenFolderDialog{Title="选择自己的钉钉账号数据目录"};if(dialog.ShowDialog()==true)_path.Text=dialog.FolderName;});
         var detect=Button("自动识别",()=>
@@ -65,17 +67,20 @@ public sealed class AttendancePanel : UserControl
         });
         RegisterName("AttendanceDetect",detect);
         DockPanel.SetDock(browse,Dock.Right);paths.Children.Add(browse);
-        DockPanel.SetDock(detect,Dock.Right);paths.Children.Add(detect);paths.Children.Add(_path);panel.Children.Add(paths);
-        panel.Children.Add(_day);
-        panel.Children.Add(_settingsHint);
+        DockPanel.SetDock(detect,Dock.Right);paths.Children.Add(detect);paths.Children.Add(_path);_details.Children.Add(paths);
+        _details.Children.Add(_day);
+        _details.Children.Add(_settingsHint);
         var actions=new WrapPanel{Margin=new Thickness(0,10,0,0)};
         actions.Children.Add(Button("保存设置",Save));
         actions.Children.Add(Button("立即检查",()=>{if(!_store.LoadOptions().Enabled)throw new InvalidOperationException("请先启用打卡提醒。");_store.Update(o=>o with{CheckRequestedAt=DateTime.Now});_launch();}));
         _confirmed=Button("我已打卡",()=>_store.Update(o=>o with{ManualConfirmedOn=DateOnly.FromDateTime(DateTime.Now)}));
         actions.Children.Add(_confirmed);
-        panel.Children.Add(actions);panel.Children.Add(_status);
+        _details.Children.Add(actions);panel.Children.Add(_status);
         Content=new Border{Child=panel,Background=Brushes.White,Padding=new Thickness(20),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,16)};
         _enabled.Click+=(_,_)=>Toggle();
+        _enabled.Checked+=(_,_)=>UpdateDetailsVisibility();
+        _enabled.Unchecked+=(_,_)=>UpdateDetailsVisibility();
+        UpdateDetailsVisibility();
         _timer.Tick+=(_,_)=>RefreshStatus();
         Loaded+=(_,_)=>{Load();_timer.Start();};Unloaded+=(_,_)=>_timer.Stop();
     }
@@ -86,6 +91,8 @@ public sealed class AttendancePanel : UserControl
         return b;
     }
     private static void LaunchHost(){using var process=WebResources.WebResourceLauncher.LaunchAttendance();}
+    /// <summary>未勾选「钉钉打卡提醒」时收起下方配置区；状态 / 错误行 <c>_status</c> 始终可见。</summary>
+    private void UpdateDetailsVisibility() => _details.Visibility=_enabled.IsChecked==true?Visibility.Visible:Visibility.Collapsed;
     private void Load()
     {
         try{var o=_store.LoadOptions();_enabled.IsChecked=o.Enabled;_path.Text=o.AccountDirectory;

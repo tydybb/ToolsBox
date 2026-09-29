@@ -59,8 +59,8 @@ public class AttendancePanelTests
             if(!manual)store.SaveSnapshot(new(DateTime.Now,DateTime.Today,"","已读取"));
             var view=new AttendancePanel(store,_=>{},()=>{},()=>true);
             view.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
-            var panel=(StackPanel)((Border)view.Content).Child;
-            var button=panel.Children.OfType<WrapPanel>().Single().Children.OfType<Button>().Last();
+            var details=(StackPanel)view.FindName("AttendanceDetails");
+            var button=details.Children.OfType<WrapPanel>().Single().Children.OfType<Button>().Last();
             Assert.False(button.IsEnabled);Assert.Contains("已打卡",button.Content.ToString());
             view.RaiseEvent(new RoutedEventArgs(FrameworkElement.UnloadedEvent));
         }
@@ -77,8 +77,8 @@ public class AttendancePanelTests
             store.Update(o=>o with{Enabled=true,ManualConfirmedOn=DateOnly.FromDateTime(DateTime.Now)});
             int launches=0;
             var view=new AttendancePanel(store,_=>{},()=>launches++,()=>true);
-            var panel=(StackPanel)((Border)view.Content).Child;
-            var button=panel.Children.OfType<WrapPanel>().Single().Children.OfType<Button>().Single(b=>Equals(b.Content,"立即检查"));
+            var details=(StackPanel)view.FindName("AttendanceDetails");
+            var button=details.Children.OfType<WrapPanel>().Single().Children.OfType<Button>().Single(b=>Equals(b.Content,"立即检查"));
             button.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             var status=(TextBlock)view.FindName("AttendanceStatus");
             Assert.Contains("正在请求检查",status.Text);Assert.Equal(1,launches);
@@ -124,6 +124,69 @@ public class AttendancePanelTests
         {
             var enabled=(CheckBox)panel.FindName("AttendanceEnabled");enabled.IsChecked=true;enabled.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             Assert.False(store.LoadOptions().Enabled);Assert.False(enabled.IsChecked);Assert.Equal(new[]{true,false},writes);
+        }
+        finally{if(Directory.Exists(root))Directory.Delete(root,true);}
+        return Task.CompletedTask;
+    });
+    [Fact]
+    public Task DetailsShowOnlyAfterEnablingReminder() => WpfTestThread.RunAsync(()=>
+    {
+        string root=Path.Combine(Path.GetTempPath(),"ToolsBox-attendance-panel-"+Guid.NewGuid().ToString("N"));
+        var store=new AttendanceStore(root);
+        try
+        {
+            var view=new AttendancePanel(store,_=>{},()=>{},()=>true);
+            var details=(StackPanel)view.FindName("AttendanceDetails");
+            var status=(TextBlock)view.FindName("AttendanceStatus");
+            var enabled=(CheckBox)view.FindName("AttendanceEnabled");
+            Assert.NotNull(details);Assert.NotNull(status);Assert.NotNull(enabled);
+
+            view.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+            Assert.Equal(Visibility.Collapsed,details.Visibility);
+            Assert.Equal(Visibility.Visible,status.Visibility);
+
+            enabled.IsChecked=true;enabled.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.True(store.LoadOptions().Enabled);
+            Assert.Equal(Visibility.Visible,details.Visibility);
+
+            enabled.IsChecked=false;enabled.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.False(store.LoadOptions().Enabled);
+            Assert.Equal(Visibility.Collapsed,details.Visibility);
+            Assert.Equal(Visibility.Visible,status.Visibility);
+            view.RaiseEvent(new RoutedEventArgs(FrameworkElement.UnloadedEvent));
+        }
+        finally{if(Directory.Exists(root))Directory.Delete(root,true);}
+        return Task.CompletedTask;
+    });
+    [Fact]
+    public Task DetailsFollowPersistedStateOnLoad() => WpfTestThread.RunAsync(()=>
+    {
+        string root=Path.Combine(Path.GetTempPath(),"ToolsBox-attendance-panel-"+Guid.NewGuid().ToString("N"));
+        var store=new AttendanceStore(root);
+        try
+        {
+            store.Update(o=>o with{Enabled=true});
+            var view=new AttendancePanel(store,_=>{},()=>{},()=>true);
+            view.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+            Assert.Equal(Visibility.Visible,((StackPanel)view.FindName("AttendanceDetails")).Visibility);
+            view.RaiseEvent(new RoutedEventArgs(FrameworkElement.UnloadedEvent));
+        }
+        finally{if(Directory.Exists(root))Directory.Delete(root,true);}
+        return Task.CompletedTask;
+    });
+    [Fact]
+    public Task RefusedConsentLeavesDetailsCollapsed() => WpfTestThread.RunAsync(()=>
+    {
+        string root=Path.Combine(Path.GetTempPath(),"ToolsBox-attendance-panel-"+Guid.NewGuid().ToString("N"));
+        var store=new AttendanceStore(root);
+        try
+        {
+            var view=new AttendancePanel(store,_=>{},()=>{},()=>false);
+            var enabled=(CheckBox)view.FindName("AttendanceEnabled");
+            enabled.IsChecked=true;enabled.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.False(enabled.IsChecked);
+            Assert.False(store.LoadOptions().Enabled);
+            Assert.Equal(Visibility.Collapsed,((StackPanel)view.FindName("AttendanceDetails")).Visibility);
         }
         finally{if(Directory.Exists(root))Directory.Delete(root,true);}
         return Task.CompletedTask;
