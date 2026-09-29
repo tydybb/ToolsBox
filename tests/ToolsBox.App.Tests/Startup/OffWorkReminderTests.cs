@@ -77,6 +77,8 @@ public sealed class OffWorkReminderTests
             Assert.Null(window.FindName("ReminderDisclaimer"));
             Assert.Equal("即将关机", Assert.IsType<TextBlock>(window.FindName("WarningTitle")).Text);
             Assert.Equal("你已经下班，我要把你电脑关了", Assert.IsType<TextBlock>(window.FindName("ReminderMessage")).Text);
+            // 提醒窗是收工时刻：节日文案要切到收工语气，距离天数从明天起算（距中秋 7 天 → 显示 6 天）。
+            Assert.Contains("收工！距离中秋节假期还有 6 天", Assert.IsType<TextBlock>(window.FindName("FlavorText")).Text);
             Assert.Equal("你已无偿加班", Assert.IsType<TextBlock>(window.FindName("OverdueNotice")).Text);
             var timer = Assert.IsType<TextBlock>(window.FindName("OverdueTimer"));
             Assert.Equal("00:05:00", timer.Text);

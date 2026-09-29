@@ -37,6 +37,26 @@ public sealed class WorkCountdownFlavorTests
         Assert.Equal("下班即放假，中秋节假期我来啦！", vm.FlavorText);
     }
 
+    [Fact]
+    public void FlavorText_OnceOffWorkIsReached_CountsRemainingDaysFromTomorrow()
+    {
+        // 2026-09-18 距中秋 7 天：白天倒计时显示 7 天；到点下班（“即将关机”提醒弹出、尚未点“下班”）
+        // 就已进入收工时刻，今天不再计入，应显示 6 天。
+        DateTime now = new(2026, 9, 18, 9, 30, 0);
+        using var vm = new WorkCountdownViewModel(() => now, new EmptyStore(), false);
+        vm.StartTimeText = "09:30";
+        vm.StartCommand.Execute(null);
+        Assert.Contains("距离中秋节假期还有 7 天", vm.FlavorText);
+
+        now = new DateTime(2026, 9, 18, 18, 35, 0);
+        vm.Refresh();
+
+        Assert.True(vm.IsOverdue);
+        Assert.False(vm.IsFinished);
+        Assert.Contains("收工！距离中秋节假期还有 6 天", vm.FlavorText);
+        Assert.DoesNotContain("坚持住", vm.FlavorText);
+    }
+
     [Theory]
     [InlineData(2026, 11, 9, "周一")]
     [InlineData(2026, 11, 10, "周二")]

@@ -126,6 +126,44 @@ public sealed class HolidayFunCopyTests
     }
 
     [Fact]
+    public void OffWork_NearHoliday_ExcludesTodayFromRemainingDays()
+    {
+        // 2026-09-18 距中秋 7 天：白天倒计时按日历差显示 7 天，收工时今天已过完，应显示 6 天。
+        var moment = HolidayFunCopy.Detect(new DateOnly(2026, 9, 18));
+        Assert.Equal(HolidayMomentKind.NearHoliday, moment.Kind);
+        Assert.Equal(7, moment.Days);
+        Assert.Equal("距离中秋节假期还有 7 天，坚持住，放假在望！", HolidayFunCopy.Countdown(moment));
+        Assert.Equal("收工！距离中秋节假期还有 6 天，假期在望", HolidayFunCopy.OffWork(moment));
+    }
+
+    [Fact]
+    public void OffWork_AfterHoliday_ExcludesTodayFromNextHolidayCount()
+    {
+        // 2026-09-28 距国庆 3 天：收工时应按 9/29、9/30 两天计。
+        var moment = HolidayFunCopy.Detect(new DateOnly(2026, 9, 28));
+        Assert.Equal(HolidayMomentKind.AfterHoliday, moment.Kind);
+        Assert.Equal(3, moment.Days);
+        Assert.Equal("收工！中秋节假期余额已清零，国庆节假期还有 2 天到账", HolidayFunCopy.OffWork(moment));
+    }
+
+    [Fact]
+    public void OffWork_MakeupWorkday_ExcludesTodayFromHolidayCount()
+    {
+        // 2026-09-20 补班距中秋 5 天：收工时从 9/21 起算 4 天。
+        var moment = HolidayFunCopy.Detect(new DateOnly(2026, 9, 20));
+        Assert.Equal(HolidayMomentKind.MakeupWorkday, moment.Kind);
+        Assert.Equal(5, moment.Days);
+        Assert.Equal("补班日准点收工，距离中秋节假期还有 4 天，赚了！", HolidayFunCopy.OffWork(moment));
+    }
+
+    [Fact]
+    public void OffWork_HolidayStartsTomorrow_StillShowsOneDay()
+    {
+        var moment = new HolidayMoment(HolidayMomentKind.NearHoliday, "中秋节", 1, 0, "");
+        Assert.Equal("收工！距离中秋节假期还有 1 天，假期在望", HolidayFunCopy.OffWork(moment));
+    }
+
+    [Fact]
     public void DuringHoliday_ComplainsAboutWorkingThroughHoliday_InsteadOfPraisingIt()
     {
         var moment = new HolidayMoment(HolidayMomentKind.DuringHoliday, "国庆节", 3, 4, "");

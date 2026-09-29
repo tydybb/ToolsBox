@@ -176,10 +176,11 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
         _currentTime < _schedule.Start ? "尚未到上班时间，显示距离预计下班的时间" : "距离预计下班";
 
     /// <summary>
-    /// 趣味文案：倒计时阶段用“倒计时语气”，下班后切换为“收工语气”。
+    /// 趣味文案：倒计时阶段用“倒计时语气”，到点下班（“即将关机”提醒弹出）或点击“下班”后切换为“收工语气”。
     /// 优先节日场景（假期中 / 节前 / 调休 / 节后 / 7 天内倒计时）；
     /// 无节日气氛且有加班任务在跑（或已无偿加班）时用加班语气，避免躺平文案与加班提示同屏打架；
     /// 两者皆无时兜底为周一至周日的星期文案。
+    /// 收工语气的“还有 N 天”从明天起算（今天已过完），所以同一日期白天是 N 天、下班时是 N-1 天。
     /// </summary>
     public string FlavorText
     {
@@ -187,10 +188,11 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
         {
             DateOnly date = DateOnly.FromDateTime(DisplayTime);
             HolidayMoment moment = HolidayFunCopy.Detect(date);
-            string holiday = IsFinished ? HolidayFunCopy.OffWork(moment) : HolidayFunCopy.Countdown(moment);
+            bool offWorkMoment = IsFinished || IsOverdue;
+            string holiday = offWorkMoment ? HolidayFunCopy.OffWork(moment) : HolidayFunCopy.Countdown(moment);
             if (holiday.Length > 0) return holiday;
             if (IsOvertimeFlavorActive) return OvertimeFunCopy.Countdown(date);
-            return IsFinished ? WeekdayFunCopy.OffWork(date) : WeekdayFunCopy.Countdown(date);
+            return offWorkMoment ? WeekdayFunCopy.OffWork(date) : WeekdayFunCopy.Countdown(date);
         }
     }
 

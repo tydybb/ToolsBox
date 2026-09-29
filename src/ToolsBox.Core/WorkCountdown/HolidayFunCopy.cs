@@ -94,11 +94,17 @@ public static class HolidayFunCopy
         HolidayMomentKind.HolidayEve => $"下班即放假，{moment.Name}假期我来啦！",
         HolidayMomentKind.MakeupWorkday => moment.Name.Length == 0
             ? "补班日准点收工，这班补得值！"
-            : $"补班日准点收工，距离{moment.Name}假期还有 {moment.Days} 天，赚了！",
+            : $"补班日准点收工，距离{moment.Name}假期还有 {DaysAfterToday(moment)} 天，赚了！",
         HolidayMomentKind.AfterHoliday => moment.NextName.Length == 0
             ? "假期余额已清零，打工人回归，且行且珍惜。"
-            : $"收工！{moment.Name}假期余额已清零，{moment.NextName}假期还有 {moment.Days} 天到账",
-        HolidayMomentKind.NearHoliday => $"收工！距离{moment.Name}假期还有 {moment.Days} 天，假期在望",
+            : $"收工！{moment.Name}假期余额已清零，{moment.NextName}假期还有 {DaysAfterToday(moment)} 天到账",
+        HolidayMomentKind.NearHoliday => $"收工！距离{moment.Name}假期还有 {DaysAfterToday(moment)} 天，假期在望",
         _ => ""
     };
+
+    /// <summary>
+    /// 收工文案里的距离天数：今天已经过完，从明天开始数到假期首日，
+    /// 因此同一日期白天倒计时显示 N 天、下班时显示 N-1 天。最少显示 1 天，避免出现“还有 0 天”。
+    /// </summary>
+    private static int DaysAfterToday(HolidayMoment moment) => Math.Max(1, moment.Days - 1);
 }
