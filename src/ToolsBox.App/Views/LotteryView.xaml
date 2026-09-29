@@ -1,0 +1,112 @@
+<UserControl x:Class="ToolsBox.App.Views.LotteryView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Loaded="OnLoaded" Unloaded="OnUnloaded">
+ <UserControl.Resources>
+  <Style TargetType="DataGrid"><Setter Property="AutoGenerateColumns" Value="False"/><Setter Property="IsReadOnly" Value="True"/><Setter Property="CanUserAddRows" Value="False"/><Setter Property="SelectionMode" Value="Single"/><Setter Property="RowHeight" Value="42"/><Setter Property="HeadersVisibility" Value="Column"/><Setter Property="GridLinesVisibility" Value="Horizontal"/><Setter Property="HorizontalGridLinesBrush" Value="#E8EDF2"/><Setter Property="BorderBrush" Value="#DCE3EA"/></Style>
+  <Style TargetType="TabItem"><Setter Property="Padding" Value="16,10"/></Style>
+  <Style x:Key="TableCellText" TargetType="TextBlock"><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="Margin" Value="4,0"/></Style>
+  <Style x:Key="ModeCell" TargetType="DataGridCell">
+   <Setter Property="Cursor" Value="Hand"/><Setter Property="ToolTip" Value="双击切换真买/假买；仅未开奖可修改，需联网核对"/>
+   <EventSetter Event="MouseDoubleClick" Handler="OnModeDoubleClick"/>
+  </Style>
+  <Style x:Key="BallInput" TargetType="TextBox">
+   <Setter Property="Width" Value="38"/><Setter Property="Height" Value="38"/><Setter Property="Margin" Value="3,0"/>
+   <Setter Property="MaxLength" Value="2"/><Setter Property="Tag" Value="33"/><Setter Property="FontSize" Value="15"/><Setter Property="FontWeight" Value="SemiBold"/>
+   <Setter Property="Foreground" Value="White"/><Setter Property="CaretBrush" Value="White"/><Setter Property="Background" Value="#D94351"/><Setter Property="BorderBrush" Value="#D94351"/>
+   <Setter Property="TextAlignment" Value="Center"/><Setter Property="VerticalContentAlignment" Value="Center"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox"><Border CornerRadius="19" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="2"><ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" Margin="2"/></Border></ControlTemplate></Setter.Value></Setter>
+   <EventSetter Event="TextChanged" Handler="OnBallTextChanged"/><EventSetter Event="PreviewTextInput" Handler="OnBallTextInput"/><EventSetter Event="GotKeyboardFocus" Handler="OnBallFocus"/>
+   <Style.Triggers><Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="#17212B"/></Trigger></Style.Triggers>
+  </Style>
+  <DataTemplate x:Key="NumberTemplate">
+   <StackPanel Orientation="Horizontal" Margin="8,4">
+    <ItemsControl ItemsSource="{Binding Reds}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+     <ItemsControl.ItemTemplate><DataTemplate><Border Width="26" Height="26" CornerRadius="13" Background="#D94351" Margin="0,0,3,0"><TextBlock Text="{Binding StringFormat=D2}" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center"/></Border></DataTemplate></ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <Border Width="26" Height="26" CornerRadius="13" Background="#246BFD" Margin="5,0,0,0"><TextBlock Text="{Binding Blue, StringFormat=D2}" Foreground="White" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+   </StackPanel>
+  </DataTemplate>
+ </UserControl.Resources>
+ <Grid Margin="24,20">
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <DockPanel>
+   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+    <Button Content="立即刷新" Command="{Binding RefreshCommand}"/>
+    <Button Content="获取全部历史" Command="{Binding FullHistoryCommand}" ToolTip="获取官方接口目前提供的全部期次，并保留已有缓存"/>
+   </StackPanel>
+   <TextBlock Text="双色球统计" FontSize="26" FontWeight="SemiBold"/>
+  </DockPanel>
+  <StackPanel Grid.Row="1" Margin="0,8,0,14">
+   <TextBlock Text="{Binding SourceStatus}" Foreground="#64748B" TextWrapping="Wrap"/>
+   <TextBlock Text="{Binding NextDrawStatus}" Foreground="#246BFD" FontWeight="SemiBold" Margin="0,6,0,0" TextWrapping="Wrap"/>
+  </StackPanel>
+  <TabControl Grid.Row="2" Background="White" BorderBrush="#DCE3EA">
+   <TabItem Header="选号买入">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="18" IsEnabled="{Binding CanEdit}">
+     <WrapPanel><TextBlock Text="下一期："/><TextBlock Text="{Binding NextIssue}" FontWeight="Bold" Margin="0,0,20,0"/><TextBlock Text="预计开奖日："/><TextBlock Text="{Binding NextDate}" FontWeight="Bold"/></WrapPanel>
+     <TextBlock Text="期次按最新开奖推算；休市及跨年不自动推定。请核对官方销售公告。预计开奖日北京时间 20:00 起禁止记账。" Foreground="#8C5916" TextWrapping="Wrap" Margin="0,8,0,12"/>
+     <WrapPanel VerticalAlignment="Center">
+      <TextBlock Text="机选注数" VerticalAlignment="Center"/><TextBox Text="{Binding CountInput, UpdateSourceTrigger=PropertyChanged}" Width="65" Margin="8,0" MaxLength="5"/>
+      <Button Content="追加机选" Command="{Binding GenerateCommand}"/>
+      <TextBlock Text="统一倍数（1–99）" VerticalAlignment="Center" Margin="22,0,6,0"/><TextBox Text="{Binding MultipleInput, UpdateSourceTrigger=PropertyChanged}" Width="65" MaxLength="2"/>
+     </WrapPanel>
+     <WrapPanel Margin="0,12,0,8">
+      <StackPanel Orientation="Horizontal" Margin="0,0,8,6"><TextBlock Text="红球" VerticalAlignment="Center" Foreground="#D94351" Margin="0,0,4,0"/>
+       <TextBox x:Name="Red1" Style="{StaticResource BallInput}" Text="{Binding RedInputs[0].Text, UpdateSourceTrigger=PropertyChanged}" ToolTip="第 1 个红球（01–33）"/>
+       <TextBox x:Name="Red2" Style="{StaticResource BallInput}" Text="{Binding RedInputs[1].Text, UpdateSourceTrigger=PropertyChanged}" ToolTip="第 2 个红球（01–33）"/>
+       <TextBox x:Name="Red3" Style="{StaticResource BallInput}" Text="{Binding RedInputs[2].Text, UpdateSourceTrigger=PropertyChanged}" ToolTip="第 3 个红球（01–33）"/>
+       <TextBox x:Name="Red4" Style="{StaticResource BallInput}" Text="{Binding RedInputs[3].Text, UpdateSourceTrigger=PropertyChanged}" ToolTip="第 4 个红球（01–33）"/>
+       <TextBox x:Name="Red5" Style="{StaticResource BallInput}" Text="{Binding RedInputs[4].Text, UpdateSourceTrigger=PropertyChanged}" ToolTip="第 5 个红球（01–33）"/>
+       <TextBox x:Name="Red6" Style="{StaticResource BallInput}" Text="{Binding RedInputs[5].Text, UpdateSourceTrigger=PropertyChanged}" ToolTip="第 6 个红球（01–33）"/>
+       <TextBlock Text="蓝球" Foreground="#246BFD" VerticalAlignment="Center" Margin="10,0,4,0"/>
+       <TextBox x:Name="BlueNumber" Style="{StaticResource BallInput}" Tag="16" Background="#246BFD" BorderBrush="#246BFD" Text="{Binding BlueInput, UpdateSourceTrigger=PropertyChanged}" ToolTip="蓝球（01–16）"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Margin="0,0,0,6" VerticalAlignment="Center"><Button Content="加入自选" Command="{Binding AddManualCommand}"/><Button Content="保存为幸运号" Command="{Binding SaveFavoriteCommand}"/></StackPanel>
+     </WrapPanel>
+     <TextBlock Text="红球每框 01–33，输入两位后自动跳到下一框；单数字可按 Tab 继续。幸运号仅保存上方手动输入的号码。" Foreground="#64748B" TextWrapping="Wrap"/>
+     <ListBox ItemsSource="{Binding Draft}" SelectedItem="{Binding SelectedDraft}" ItemTemplate="{StaticResource NumberTemplate}" Height="224" MinHeight="224" Padding="2" Margin="0,12,0,8">
+      <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Height" Value="42"/><Setter Property="Padding" Value="0"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style></ListBox.ItemContainerStyle>
+     </ListBox>
+     <WrapPanel><Button Content="移除选中" Command="{Binding RemoveDraftCommand}" Margin="0,0,6,0"/><Button Content="清空选号" Command="{Binding ClearDraftCommand}"/>
+     </WrapPanel>
+     <Border Background="#F1F6FF" Padding="14" Margin="0,14,0,0" CornerRadius="6"><StackPanel>
+      <TextBlock Text="{Binding DraftSummary}" FontSize="18" FontWeight="SemiBold"/>
+      <CheckBox Content="真买：记录实际线下购买（不勾选为假买，无实际支出）" IsChecked="{Binding IsRealBuy}" Margin="0,12,0,10"/>
+      <CheckBox IsChecked="{Binding ScheduleConfirmed}"><TextBlock Text="我已核对以上期号、预计开奖日与官方销售安排一致" TextWrapping="Wrap"/></CheckBox>
+      <Button Content="确认并保存买入记录" Command="{Binding BuyCommand}" HorizontalAlignment="Left" Margin="0,12,0,0"/>
+     </StackPanel></Border>
+    </StackPanel></ScrollViewer>
+   </TabItem>
+   <TabItem Header="幸运号码"><Grid Margin="18" IsEnabled="{Binding CanEdit}">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <TextBlock Text="在选号页手动输入号码，点击“保存为幸运号”命名保存，可在这里重复使用。" TextWrapping="Wrap" Foreground="#64748B" Margin="0,0,0,12"/>
+    <DataGrid Grid.Row="1" ItemsSource="{Binding Favorites}" SelectedItem="{Binding SelectedFavorite}"><DataGrid.Columns>
+     <DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="名称" Binding="{Binding Name}" Width="180"/>
+     <DataGridTemplateColumn Header="幸运号码" Width="*"><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl VerticalAlignment="Center" Content="{Binding Numbers}" ContentTemplate="{StaticResource NumberTemplate}"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+    </DataGrid.Columns></DataGrid>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,14,0,0"><Button Content="加入选号列表" Command="{Binding UseFavoriteCommand}"/><Button Content="删除选中" Command="{Binding DeleteFavoriteCommand}"/></StackPanel>
+   </Grid></TabItem>
+   <TabItem Header="历史开奖"><Grid Margin="18"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/></Grid.RowDefinitions>
+    <TextBlock Text="默认刷新最近 100 期；全部历史以官方接口可提供的范围为准。奖金单位：元（单注税前）。" TextWrapping="Wrap" Foreground="#64748B" Margin="0,0,0,12"/>
+    <DataGrid Grid.Row="1" ItemsSource="{Binding Draws}"><DataGrid.Columns>
+     <DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="期号" Binding="{Binding Issue}" Width="90"/><DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="开奖日期" Binding="{Binding Date}" Width="105"/>
+     <DataGridTemplateColumn Header="红球 + 蓝球" Width="235"><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl VerticalAlignment="Center" Content="{Binding Numbers}" ContentTemplate="{StaticResource NumberTemplate}"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn><DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="一等奖" Binding="{Binding FirstPrize}" Width="100"/><DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="二等奖" Binding="{Binding SecondPrize}" Width="100"/><DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="特别规则" Binding="{Binding Special}" Width="*" MinWidth="80"/>
+    </DataGrid.Columns></DataGrid>
+   </Grid></TabItem>
+   <TabItem Header="记录统计"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Grid Margin="18"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition/></Grid.RowDefinitions>
+    <Border Background="#E8F3EE" Padding="12" CornerRadius="5"><TextBlock Text="{Binding TotalSummary}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" LineHeight="25"/></Border>
+    <Border Grid.Row="1" Background="#F1F6FF" Padding="12" Margin="0,8,0,0" CornerRadius="5"><TextBlock Text="{Binding RealSummary}" TextWrapping="Wrap" LineHeight="23"/></Border>
+    <Border Grid.Row="2" Background="#FFF5E8" Padding="12" Margin="0,8,0,0" CornerRadius="5"><TextBlock Text="{Binding FakeSummary}" TextWrapping="Wrap" LineHeight="23"/></Border>
+    <TextBlock Grid.Row="3" Text="假买盈亏＝模拟本金－应得奖金；真买盈亏＝奖金－本金。总盈亏含模拟机会盈亏，并非实际现金收益。奖金仅供核对，并不表示已兑付；未含税费或地方活动额外派奖。" TextWrapping="Wrap" Foreground="#64748B" Margin="0,10,0,10"/>
+    <DataGrid Grid.Row="4" ItemsSource="{Binding Records}" MinHeight="220" MaxHeight="400"><DataGrid.Columns>
+     <DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="期号" Binding="{Binding Issue}" Width="80"/><DataGridTextColumn ElementStyle="{StaticResource TableCellText}" x:Name="ModeColumn" Header="模式" Binding="{Binding Mode}" CellStyle="{StaticResource ModeCell}" Width="60"/>
+     <DataGridTemplateColumn Header="号码" Width="235"><DataGridTemplateColumn.CellTemplate><DataTemplate><ContentControl VerticalAlignment="Center" Content="{Binding Numbers}" ContentTemplate="{StaticResource NumberTemplate}"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn><DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="倍数" Binding="{Binding Multiple}" Width="45"/>
+     <DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="本金/模拟本金" Binding="{Binding Cost, StringFormat=N2}" Width="95"/><DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="命中" Binding="{Binding Match}" Width="85"/>
+     <DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="结果" Binding="{Binding Result}" Width="160"/><DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="奖金/应得" Binding="{Binding Prize}" Width="100"/><DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="净盈亏" Binding="{Binding Net}" Width="100"/><DataGridTextColumn ElementStyle="{StaticResource TableCellText}" Header="记录时间（北京）" Binding="{Binding RecordedAt}" Width="145"/>
+    </DataGrid.Columns></DataGrid>
+   </Grid></ScrollViewer></TabItem>
+  </TabControl>
+  <StackPanel Grid.Row="3" Margin="0,10,0,0"><ProgressBar Height="3" IsIndeterminate="{Binding IsBusy}"/><TextBlock Text="{Binding Status}" TextWrapping="Wrap" Foreground="#334155" Margin="0,6,0,0"/><TextBlock Text="仅供成年人理性娱乐与记账，不提供中奖保证。页面开启期间每 5 分钟刷新；关闭页面后停止自动刷新。" TextWrapping="Wrap" Foreground="#64748B" FontSize="11" Margin="0,5,0,0"/></StackPanel>
+ </Grid>
+</UserControl>
