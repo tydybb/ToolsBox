@@ -201,6 +201,12 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
 
     public bool HasFlavor => FlavorText.Length > 0;
 
+    /// <summary>
+    /// 下班庆祝特效分级：节前最后一个工作日或法定假期内才有，提醒窗据此撒纸屑 / 放烟花。
+    /// 与趣味文案同源，按下班时刻的日期判定，非假期日子为 None。
+    /// </summary>
+    public CelebrationLevel CelebrationLevel => HolidayCelebration.Detect(DateOnly.FromDateTime(DisplayTime));
+
     public void Refresh()
     {
         if (_disposed) return;
@@ -373,7 +379,7 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
             nameof(OvertimeMessage), nameof(RemainingText), nameof(IsOverdue), nameof(ElapsedText), nameof(TimerText),
             nameof(StatusText), nameof(IsFinished), nameof(FinishedAt), nameof(IsEarlyDeparture),
             nameof(HasIncompleteOvertime), nameof(FinishMessage), nameof(FinishDetails), nameof(FinishedTimerLabel),
-            nameof(FlavorText), nameof(HasFlavor) }) OnPropertyChanged(property);
+            nameof(FlavorText), nameof(HasFlavor), nameof(CelebrationLevel) }) OnPropertyChanged(property);
         FinishCommand.RaiseCanExecuteChanged();
     }
 

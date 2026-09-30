@@ -64,5 +64,9 @@
                     Background="#0078D7" Foreground="White"
                     BorderBrush="White" BorderThickness="1" Click="OnDismiss"/>
         </StackPanel>
+
+        <!-- 庆祝特效覆盖层：负边距抵消根 Grid 的 28/24 外边距，正好铺满整扇窗；
+             不参与命中测试，纸屑与烟花不会挡住“下班 / 关闭”按钮。 -->
+        <Canvas x:Name="CelebrationCanvas" Grid.RowSpan="5" Margin="-28,-24" IsHitTestVisible="False"/>
     </Grid>
 </Window>

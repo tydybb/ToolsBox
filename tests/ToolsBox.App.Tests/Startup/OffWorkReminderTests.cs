@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using ToolsBox.App.Views;
 using ToolsBox.App.WorkCountdown;
+using ToolsBox.Core.WorkCountdown;
 
 namespace ToolsBox.App.Tests.Startup;
 
@@ -163,6 +164,60 @@ public sealed class OffWorkReminderTests
         }
         finally { window.Close(); }
     });
+
+    [Fact]
+    public Task ReminderWindow_Celebration_FiresOnlyOnHolidayDays_AndClearsOnClose() => WpfTestThread.RunAsync(() =>
+    {
+        // 2026-09-30 是国庆节前最后一个工作日，下班 18:35 已过 18:30。
+        DateTime now = new(2026, 9, 30, 18, 35, 0);
+        using var vm = new WorkCountdownViewModel(() => now, new EmptyStore(), false);
+        vm.StartTimeText = "0930";
+        vm.StartCommand.Execute(null);
+        Assert.True(vm.IsOverdue);
+        // 国庆 7 天 → 完整版（纸屑 + 烟花）
+        Assert.Equal(CelebrationLevel.Full, vm.CelebrationLevel);
+
+        var window = new OffWorkReminderWindow(vm);
+        var canvas = Assert.IsAssignableFrom<Canvas>(window.FindName("CelebrationCanvas"));
+        window.Measure(new Size(520, 320));
+        window.Arrange(new Rect(0, 0, 520, 320));
+        window.UpdateLayout();
+        var content = Assert.IsAssignableFrom<FrameworkElement>(window.Content);
+        content.Measure(new Size(520, 320));
+        content.Arrange(new Rect(0, 0, 520, 320));
+        content.UpdateLayout();
+        try
+        {
+            // 覆盖层靠负边距越出根 Grid 铺满整扇窗：既向左上偏移，尺寸也比内容区更大。
+            // 没有这条就只能证明“生成了元素”，证明不了纸屑真的落到看得见的地方。
+            var origin = canvas.TransformToAncestor(content).Transform(new Point(0, 0));
+            Assert.True(origin.X < 0 && origin.Y < 0, $"覆盖层原点 {origin} 未越出内容区");
+            Assert.True(canvas.ActualWidth > content.ActualWidth && canvas.ActualHeight > content.ActualHeight,
+                $"覆盖层 {canvas.ActualWidth}x{canvas.ActualHeight} 未大于内容区 {content.ActualWidth}x{content.ActualHeight}");
+
+            Assert.False(canvas.IsHitTestVisible);   // 覆盖层不能挡住“下班 / 关闭”按钮
+            Assert.Empty(canvas.Children);
+
+            window.StartCelebration(CelebrationLevel.None);
+            Assert.Empty(canvas.Children);
+
+            window.StartCelebration(vm.CelebrationLevel);
+            Assert.NotEmpty(canvas.Children);
+        }
+        finally { window.Close(); }
+        Assert.Empty(canvas.Children);               // 关窗即停定时器并清空画布，不留残留
+        return Task.CompletedTask;
+    });
+
+    [Fact]
+    public void CelebrationLevel_FollowsHolidayLengthAndSkipsOrdinaryDays()
+    {
+        using var shortEve = new WorkCountdownViewModel(() => new DateTime(2026, 9, 24, 18, 35, 0), new EmptyStore(), false);
+        Assert.Equal(CelebrationLevel.Light, shortEve.CelebrationLevel);  // 中秋 3 天 → 轻量版
+
+        using var ordinary = new WorkCountdownViewModel(() => new DateTime(2026, 11, 11, 18, 35, 0), new EmptyStore(), false);
+        Assert.Equal(CelebrationLevel.None, ordinary.CelebrationLevel);   // 普通日子不放
+    }
 
     private sealed class EmptyStore : ICountdownStateStore
     {
