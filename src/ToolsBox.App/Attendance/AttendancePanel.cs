@@ -1,7 +1,7 @@
+using ToolsBox.App.Infrastructure;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using ToolsBox.Core.Attendance;
@@ -17,20 +17,24 @@ public sealed class AttendancePanel : UserControl
     private readonly Func<bool> _consent;
     private readonly Func<DingTalkLocateResult> _locate;
     private readonly Button _confirmed;
-    private readonly TextBlock _startupStatus=new(){TextWrapping=TextWrapping.Wrap,Foreground=Brushes.DarkOrange,Margin=new Thickness(0,6,0,6)};
+    private readonly TextBlock _startupStatus=new(){TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,8,0,8)};
     private readonly TextBlock _settingsHint=new(){Text="保存设置：保存账号数据目录及仅今天有效的工作日 / 休息日选择。",TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,6,0,6)};
     private readonly CheckBox _enabled=new(){Content="钉钉打卡提醒（同时注册登录自启，系统状态见下方）",FontWeight=FontWeights.SemiBold};
-    private readonly TextBox _path=new(){MinWidth=150,ToolTip="留空自动定位；多个账号时请直接选择本人账号目录（含 DBFiles 的目录）"};
-    private readonly TextBlock _status=new(){TextWrapping=TextWrapping.Wrap,Foreground=Brushes.DimGray,Margin=new Thickness(0,10,0,0)};
-    private readonly ComboBox _day=new(){ItemsSource=new[]{"今日：按日历","今日：需要提醒（工作日）","今日：不提醒（休息日）"}};
+    private readonly TextBox _path=new(){MinWidth=150,MinHeight=38,VerticalContentAlignment=VerticalAlignment.Center,ToolTip="留空自动定位；多个账号时请直接选择本人账号目录（含 DBFiles 的目录）"};
+    private readonly TextBlock _status=new(){TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,12,0,0)};
+    private readonly ComboBox _day=new(){MinHeight=38,VerticalContentAlignment=VerticalAlignment.Center,ItemsSource=new[]{"今日：按日历","今日：需要提醒（工作日）","今日：不提醒（休息日）"}};
     private readonly StackPanel _details=new();
     private readonly DispatcherTimer _timer=new(){Interval=TimeSpan.FromSeconds(3)};
     public AttendancePanel() : this(new AttendanceStore(),AttendanceStartup.SetEnabled,LaunchHost,null) { }
     public AttendancePanel(AttendanceStore store,Action<bool> startup,Action launch,Func<bool>? consent,Func<DingTalkLocateResult>? locate=null)
     {
         _store=store;_startup=startup;_launch=launch;
+        SetResourceReference(ForegroundProperty,"ToolboxTextBrush");
+        _startupStatus.SetResourceReference(TextBlock.ForegroundProperty,"ToolboxWarningTextBrush");
+        _status.SetResourceReference(TextBlock.ForegroundProperty,"ToolboxMutedBrush");
+        _settingsHint.SetResourceReference(TextBlock.ForegroundProperty,"ToolboxMutedBrush");
         _locate=locate??(()=>new DingTalkDataLocator().Locate());
-        _consent=consent??(()=>MessageBox.Show(ConsentText,"启用打卡提醒",MessageBoxButton.YesNo,MessageBoxImage.Information,MessageBoxResult.No)==MessageBoxResult.Yes);
+        _consent=consent??(()=>ComfortMessageBox.Show(ConsentText,"启用打卡提醒",MessageBoxButton.YesNo,MessageBoxImage.Information,MessageBoxResult.No)==MessageBoxResult.Yes);
         NameScope.SetNameScope(this,new NameScope());RegisterName("AttendanceEnabled",_enabled);RegisterName("AttendanceStatus",_status);
         RegisterName("AttendancePath",_path);
         var panel=new StackPanel();panel.Children.Add(_enabled);panel.Children.Add(_details);
@@ -76,7 +80,10 @@ public sealed class AttendancePanel : UserControl
         _confirmed=Button("我已打卡",()=>_store.Update(o=>o with{ManualConfirmedOn=DateOnly.FromDateTime(DateTime.Now)}));
         actions.Children.Add(_confirmed);
         _details.Children.Add(actions);panel.Children.Add(_status);
-        Content=new Border{Child=panel,Background=Brushes.White,Padding=new Thickness(20),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,16)};
+        var card=new Border{Child=panel,Padding=new Thickness(20),CornerRadius=new CornerRadius(12),BorderThickness=new Thickness(1),Margin=new Thickness(0,0,0,16)};
+        card.SetResourceReference(Border.BackgroundProperty,"ToolboxSurfaceBrush");
+        card.SetResourceReference(Border.BorderBrushProperty,"ToolboxBorderBrush");
+        Content=card;
         _enabled.Click+=(_,_)=>Toggle();
         _enabled.Checked+=(_,_)=>UpdateDetailsVisibility();
         _enabled.Unchecked+=(_,_)=>UpdateDetailsVisibility();
@@ -86,7 +93,7 @@ public sealed class AttendancePanel : UserControl
     }
     private Button Button(string text,Action action)
     {
-        var b=new Button{Content=text,Padding=new Thickness(10,6,10,6),Margin=new Thickness(0,0,6,0)};
+        var b=new Button{Content=text,MinHeight=38,Padding=new Thickness(14,9,14,9),Margin=new Thickness(0,0,8,0)};
         b.Click+=(_,_)=>{try{action();RefreshStatus();}catch(Exception e){_status.Text="操作未完成："+e.Message;}};
         return b;
     }

@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using ToolsBox.App.Infrastructure;
@@ -101,9 +102,22 @@ public sealed class AttendanceHost : IDisposable
     private void ShowSettings()
     {
         if(_settings is not null){_settings.Show();_settings.Activate();return;}
-        _settings=new Window{Title="宝哥工具箱 · 打卡提醒设置（普通权限）",Width=720,Height=430,Content=new AttendancePanel(),WindowStartupLocation=WindowStartupLocation.CenterScreen};
+        _settings=CreateSettingsWindow(new AttendancePanel());
+        ComfortAppearance.InitializeDialogWindow(_settings);
         _settings.Closed+=(_,_)=>_settings=null;_settings.Show();
     }
+    private static Window CreateSettingsWindow(AttendancePanel panel) => new()
+    {
+        Title="宝哥工具箱 · 打卡提醒设置（普通权限）",
+        Width=720,Height=600,MinWidth=620,MinHeight=450,
+        WindowStartupLocation=WindowStartupLocation.CenterScreen,
+        Content=new ScrollViewer
+        {
+            Content=panel,Margin=new Thickness(20),
+            VerticalScrollBarVisibility=ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled
+        }
+    };
     public static bool HasMainConsumer()
     {
         try{if(Mutex.TryOpenExisting(MainPresenceName,out var mutex)){mutex.Dispose();return true;}}

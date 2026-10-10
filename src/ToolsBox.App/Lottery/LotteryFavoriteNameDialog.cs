@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using ToolsBox.App.Infrastructure;
 
 namespace ToolsBox.App.Lottery;
 
@@ -14,15 +15,18 @@ public sealed class LotteryFavoriteNameDialog : Window
         Width = 380; SizeToContent = SizeToContent.Height;
         ResizeMode = ResizeMode.NoResize; ShowInTaskbar = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        ComfortAppearance.InitializeDialogWindow(this);
         var panel = new StackPanel { Margin = new Thickness(20) };
         panel.Children.Add(new TextBlock { Text = "给这组手动输入的号码起个名字（1–40 字）", TextWrapping = TextWrapping.Wrap });
         _name = new TextBox { Text = suggestedName, MaxLength = 40, Padding = new Thickness(8), Margin = new Thickness(0,12,0,6) };
         panel.Children.Add(_name);
-        var error = new TextBlock { Foreground = System.Windows.Media.Brushes.Firebrick };
+        var error = new TextBlock();
+        error.SetResourceReference(TextBlock.ForegroundProperty, "ToolboxDangerTextBrush");
         panel.Children.Add(error);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0,12,0,0) };
         var cancel = new Button { Content = "取消", IsCancel = true, Padding = new Thickness(16,7,16,7) };
         var save = new Button { Content = "保存", IsDefault = true, Padding = new Thickness(16,7,16,7), Margin = new Thickness(10,0,0,0) };
+        save.SetResourceReference(StyleProperty, "ToolboxPrimaryButtonStyle");
         save.Click += (_, _) =>
         {
             if (FavoriteName.Length is < 1 or > 40) { error.Text = "请输入 1–40 个字符的名称。"; return; }

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using ToolsBox.App.Infrastructure;
 using ToolsBox.App.NetworkTraffic;
 using ToolsBox.Core.NetworkTraffic;
 
@@ -11,6 +12,7 @@ public partial class BandwidthLimitWindow : Window
     public BandwidthLimitWindow(ApplicationTrafficItemViewModel item)
     {
         InitializeComponent();
+        ComfortAppearance.InitializeDialogWindow(this);
         ApplicationText.Text = $"{item.ApplicationName}  ·  {item.ExecutablePath}";
     }
 
@@ -34,7 +36,7 @@ public partial class BandwidthLimitWindow : Window
     {
         if (!decimal.TryParse(ValueTextBox.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out decimal value) || value <= 0)
         {
-            MessageBox.Show("请输入大于零的限速值。", "输入无效", MessageBoxButton.OK, MessageBoxImage.Information);
+            ComfortMessageBox.Show("请输入大于零的限速值。", "输入无效", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 

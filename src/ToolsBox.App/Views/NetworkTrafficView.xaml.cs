@@ -1,3 +1,4 @@
+using ToolsBox.App.Infrastructure;
 using System.Windows;
 using System.Windows.Controls;
 using ToolsBox.App.NetworkTraffic;
@@ -47,7 +48,7 @@ public partial class NetworkTrafficView : UserControl
         }
         catch (Exception exception)
         {
-            MessageBox.Show(exception.Message, "上传限速操作失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ComfortMessageBox.Show(exception.Message, "上传限速操作失败", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }

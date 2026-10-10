@@ -1,3 +1,4 @@
+using ToolsBox.App.Infrastructure;
 using System.Windows;
 using System.Windows.Threading;
 using System.Security.Principal;
@@ -55,7 +56,7 @@ public sealed class AttendanceCountdownBridge : IDisposable
     {
         try{Tick();}catch(Exception){ /* Settings stay untouched; no silent enable or false confirmation. */ }
     }
-    public static bool Confirm(DateTime at) => MessageBox.Show(
+    public static bool Confirm(DateTime at) => ComfortMessageBox.Show(
         $"读取到今日上班打卡时间 {at:HH:mm}，与当前倒计时或输入不同。\n\n是否按打卡时间更新？当前加班设置保留。",
         "更新下班倒计时",MessageBoxButton.YesNo,MessageBoxImage.Question,MessageBoxResult.No)==MessageBoxResult.Yes;
     public void Dispose(){if(_timer is not null){_timer.Stop();_timer.Tick-=OnTick;}}

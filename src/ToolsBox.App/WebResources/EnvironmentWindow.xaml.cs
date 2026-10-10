@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using Microsoft.Win32;
+using ToolsBox.App.Infrastructure;
 using ToolsBox.MediaDownloads;
 
 namespace ToolsBox.App.WebResources;
@@ -18,6 +19,7 @@ public partial class EnvironmentWindow : Window
     {
         this.components = components;
         InitializeComponent();
+        ComfortAppearance.InitializeDialogWindow(this);
         Loaded += async (_, _) => await RunAsync(async ct => { await DetectAsync(ct); OperationStatus.Text = "检测完成。"; });
         Closing += HandleClosing;
     }
@@ -51,7 +53,7 @@ public partial class EnvironmentWindow : Window
         if (runtimeMissing) items.Add("• WebView2：Microsoft 官方 Evergreen x64 安装包，通常约 150–250 MB；下载后校验 Microsoft 数字签名，再以普通用户权限安装。");
         if (videoMissing) items.Add($"• 视频组件包：yt-dlp {ComponentManager.YtDlpVersion}（GitHub 官方发布）及 FFmpeg {ComponentManager.FFmpegVersion}（gyan.dev 构建），通常共约 100–200 MB，校验 SHA256。");
         if (items.Count == 0) return;
-        if (MessageBox.Show(this, string.Join("\n\n", items) + "\n\n大小仅为估计，以下载进度为准。只安装缺失项；不完整的视频组件按整包安装。是否继续？", "确认下载并安装", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (ComfortMessageBox.Show(this, string.Join("\n\n", items) + "\n\n大小仅为估计，以下载进度为准。只安装缺失项；不完整的视频组件按整包安装。是否继续？", "确认下载并安装", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         await RunAsync(async ct =>
         {
             var progress = new Progress<DownloadProgress>(Report);
@@ -75,7 +77,7 @@ public partial class EnvironmentWindow : Window
         if (busy) return;
         var picker = new OpenFolderDialog { Title = "选择包含 yt-dlp.exe、ffmpeg.exe、ffprobe.exe 的可信目录" };
         if (picker.ShowDialog(this) != true) return;
-        if (MessageBox.Show(this, "导入后会执行这三个程序以检查版本。请确认目录来自可信来源。继续？", "导入可信组件", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (ComfortMessageBox.Show(this, "导入后会执行这三个程序以检查版本。请确认目录来自可信来源。继续？", "导入可信组件", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         await RunAsync(async ct =>
         {
             Report(new("导入并检查视频组件"));
@@ -134,7 +136,7 @@ public partial class EnvironmentWindow : Window
             return;
         }
         if (closeWhenFinished) return;
-        if (MessageBox.Show(this, "取消当前检测或下载并关闭？", "关闭环境检测", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+        if (ComfortMessageBox.Show(this, "取消当前检测或下载并关闭？", "关闭环境检测", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
         { closeWhenFinished = true; operation?.Cancel(); }
     }
     private void CloseWindow(object sender, RoutedEventArgs e) => Close();

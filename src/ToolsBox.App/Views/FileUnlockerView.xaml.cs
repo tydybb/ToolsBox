@@ -1,3 +1,4 @@
+using ToolsBox.App.Infrastructure;
 using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
@@ -58,19 +59,19 @@ public partial class FileUnlockerView : UserControl
             cancelled = dialog.ShowDialog() != true;
             return !cancelled;
         });
-        if (!cancelled) MessageBox.Show(summary, "操作结果", MessageBoxButton.OK, MessageBoxImage.Information);
+        if (!cancelled) ComfortMessageBox.Show(summary, "操作结果", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private async void OnCloseHandles(object sender, RoutedEventArgs e)
     {
         if (!ViewModel.CanActOnSelectedEntries) return;
-        if (MessageBox.Show($"这是高风险操作。将强制关闭 {ViewModel.SelectedCount} 个句柄，涉及 {ViewModel.SelectedProcessCount} 个进程，可能导致目标程序崩溃或文件损坏。确定继续？", "强制关闭句柄",
+        if (ComfortMessageBox.Show($"这是高风险操作。将强制关闭 {ViewModel.SelectedCount} 个句柄，涉及 {ViewModel.SelectedProcessCount} 个进程，可能导致目标程序崩溃或文件损坏。确定继续？", "强制关闭句柄",
                 MessageBoxButton.YesNo, MessageBoxImage.Stop) != MessageBoxResult.Yes)
         {
             return;
         }
 
         string summary = await ViewModel.CloseSelectedHandlesAsync();
-        MessageBox.Show(summary, "操作结果", MessageBoxButton.OK, MessageBoxImage.Information);
+        ComfortMessageBox.Show(summary, "操作结果", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

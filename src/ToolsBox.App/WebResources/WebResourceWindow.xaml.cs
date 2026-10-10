@@ -11,6 +11,7 @@ using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
+using ToolsBox.App.Infrastructure;
 using ToolsBox.Core.WebResources;
 using ToolsBox.MediaDownloads;
 
@@ -61,6 +62,7 @@ public partial class WebResourceWindow : Window
     {
         _dataDirectory = Path.GetFullPath(dataDirectory);
         InitializeComponent();
+        ComfortAppearance.InitializeDialogWindow(this);
         InitializeLibrary();
         _components = new ComponentManager(Path.Combine(_dataDirectory, "MediaComponents"));
         _downloads = new MediaDownloadService(_components);
@@ -94,7 +96,7 @@ public partial class WebResourceWindow : Window
         if (_browserInitializing || Browser.CoreWebView2 != null || _closing) return;
         _browserInitializing = true;
         if (!WebResourceLauncher.CanRunBrowser(WebResourceLauncher.IsAdministrator()))
-        { MessageBox.Show(this, "安全检查失败：浏览窗口不能以管理员身份运行。"); Close(); return; }
+        { ComfortMessageBox.Show(this, "安全检查失败：浏览窗口不能以管理员身份运行。"); Close(); return; }
         try
         {
             // Stable user-data directory preserves the existing normal profile across EXE upgrades/restarts.
@@ -243,7 +245,7 @@ public partial class WebResourceWindow : Window
     private async void ClearSiteData(object sender, RoutedEventArgs e)
     {
         if (Browser.CoreWebView2 == null || _tasks.Any(t => t.IsActive)) { Status.Text = "请等待浏览器就绪并结束下载后清除。"; return; }
-        if (MessageBox.Show(this, "这会退出工具内的网站登录并清除 Cookie、网站存储和缓存。收藏和工具历史列表保留；只想清空历史请使用“历史记录”。继续？", "清除网站数据", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK) return;
+        if (ComfortMessageBox.Show(this, "这会退出工具内的网站登录并清除 Cookie、网站存储和缓存。收藏和工具历史列表保留；只想清空历史请使用“历史记录”。继续？", "清除网站数据", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK) return;
         try { await Browser.CoreWebView2.Profile.ClearBrowsingDataAsync(); _resources.Clear(); Status.Text = "工具内网站数据已清除。"; }
         catch { Status.Text = "清除失败，请关闭网页后重试。"; }
     }
@@ -410,7 +412,7 @@ public partial class WebResourceWindow : Window
     {
         if (_environmentWindow != null) { e.Cancel = true; _environmentWindow.RequestCloseForParentExit(); return; }
         if (_closing) { e.Cancel = !_cleanupComplete; return; }
-        if (!_forceClose && _operations.Count > 0 && MessageBox.Show(this, "仍有活动任务，关闭会取消它们。确定退出？", "退出网页资源下载", MessageBoxButton.OKCancel) != MessageBoxResult.OK)
+        if (!_forceClose && _operations.Count > 0 && ComfortMessageBox.Show(this, "仍有活动任务，关闭会取消它们。确定退出？", "退出网页资源下载", MessageBoxButton.OKCancel) != MessageBoxResult.OK)
         { e.Cancel = true; return; }
         _closing = true; _lifetime.Cancel();
         if (_operations.Count == 0) { _cleanupComplete = true; return; }

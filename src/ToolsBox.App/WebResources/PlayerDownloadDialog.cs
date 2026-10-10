@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
+using ToolsBox.App.Infrastructure;
 using ToolsBox.Core.WebResources;
 
 namespace ToolsBox.App.WebResources;
@@ -25,6 +26,7 @@ internal sealed class PlayerDownloadDialog : Window
     {
         Title = "宝哥工具箱 · 确认下载视频"; Width = 560; SizeToContent = SizeToContent.Height;
         ResizeMode = ResizeMode.NoResize; WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        ComfortAppearance.InitializeDialogWindow(this);
         var panel = new StackPanel { Margin = new(22) }; Content = panel;
         panel.Children.Add(new TextBlock { Text = "选择要下载的播放器（仅下载你有权保存的内容）", TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(_players); panel.Children.Add(_source);
@@ -34,12 +36,13 @@ internal sealed class PlayerDownloadDialog : Window
         var browse = new Button { Content = "选择目录", Padding = new(12, 6, 12, 6), Margin = new(4) };
         var cancel = new Button { Content = "取消", IsCancel = true, Padding = new(12, 6, 12, 6), Margin = new(4) };
         var confirm = new Button { Content = "确认下载 MP4", Padding = new(12, 6, 12, 6), Margin = new(4) };
+        confirm.SetResourceReference(StyleProperty, "ToolboxPrimaryButtonStyle");
         // Not IsDefault: a webpage key press must not accidentally accept this native prompt.
         browse.Click += (_, _) => { var picker = new OpenFolderDialog(); if (picker.ShowDialog(this) == true) _folder.Text = picker.FolderName; };
         confirm.Click += (_, _) =>
         {
             if (_players.SelectedItem == null || _quality.SelectedItem == null || !Directory.Exists(Folder))
-            { MessageBox.Show(this, "请选择视频、清晰度和有效的保存目录。"); return; }
+            { ComfortMessageBox.Show(this, "请选择视频、清晰度和有效的保存目录。"); return; }
             DialogResult = true;
         };
         buttons.Children.Add(browse); buttons.Children.Add(cancel); buttons.Children.Add(confirm); panel.Children.Add(buttons);

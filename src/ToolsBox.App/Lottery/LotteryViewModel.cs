@@ -31,7 +31,7 @@ public sealed partial class LotteryViewModel : ObservableObject, IDisposable
     {
         _store = store ?? new LotteryStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ToolsBox", "lottery.json"));
         _client = client ?? new CwlLotteryClient();
-        _confirm = confirm ?? (message => MessageBox.Show(message, "双色球记账确认", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes);
+        _confirm = confirm ?? (message => ComfortMessageBox.Show(message, "双色球记账确认", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes);
         _now = now ?? (() => DateTimeOffset.Now);
         _requestFavoriteName = requestFavoriteName ?? LotteryFavoriteNameDialog.Prompt;
         RefreshCommand = new AsyncRelayCommand(() => RefreshAsync(), () => CanEdit);

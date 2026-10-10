@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
+using ToolsBox.App.Infrastructure;
 using ToolsBox.Core.WebResources;
 
 namespace ToolsBox.App.WebResources;
@@ -13,6 +14,7 @@ public partial class BrowserPopupWindow : Window
     public BrowserPopupWindow(WebView2 browser)
     {
         InitializeComponent();
+        ComfortAppearance.InitializeDialogWindow(this);
         _browser = browser;
         _core = browser.CoreWebView2 ?? throw new InvalidOperationException("浏览器尚未就绪。");
         PopupBrowserHost.Child = browser;

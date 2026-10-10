@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using ToolsBox.App.Infrastructure;
 
 namespace ToolsBox.App.WebResources;
 
@@ -14,6 +15,7 @@ public partial class BrowserLibraryWindow : Window
     {
         _store = store; _favorites = favorites;
         InitializeComponent();
+        ComfortAppearance.InitializeDialogWindow(this);
         Title = Heading.Text = favorites ? "收藏夹" : "历史记录";
         Explanation.Text = favorites ? "收藏保存在本机。选中后可打开、重命名或删除；地址可能含敏感参数，请勿公开分享。" : "最近访问优先，同一地址去重，最多保留 500 条。删除或清空历史不会清除网站登录状态。";
         RenamePanel.Visibility = favorites ? Visibility.Visible : Visibility.Collapsed;
@@ -64,7 +66,7 @@ public partial class BrowserLibraryWindow : Window
     }
     private void ClearHistory(object sender, RoutedEventArgs e)
     {
-        if (_favorites || MessageBox.Show(this, "清空全部历史记录？收藏和网站登录状态将保留。", "清空历史", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK) return;
+        if (_favorites || ComfortMessageBox.Show(this, "清空全部历史记录？收藏和网站登录状态将保留。", "清空历史", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK) return;
         Change(_store.ClearHistory);
     }
     private void CloseWindow(object sender, RoutedEventArgs e) => Close();

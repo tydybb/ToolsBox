@@ -2,11 +2,7 @@
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:wv="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
- Title="网页资源下载 · 宝哥工具箱" Width="1320" Height="900" MinWidth="1000" MinHeight="700" Background="#F4F6F8">
- <Window.Resources>
-  <Style TargetType="Button"><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="4"/></Style>
-  <Style TargetType="TextBox"><Setter Property="Padding" Value="8,6"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
- </Window.Resources>
+ Title="网页资源下载 · 宝哥工具箱" Width="1320" Height="900" MinWidth="1000" MinHeight="700" Background="{DynamicResource ToolboxBackgroundBrush}">
  <Grid Margin="12">
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="2*"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="150"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <DockPanel>
@@ -28,13 +24,13 @@
   <Grid Grid.Row="2" Grid.RowSpan="3">
    <Grid.RowDefinitions><RowDefinition Height="2*" MinHeight="100"/><RowDefinition Height="8"/><RowDefinition Height="*" MinHeight="140"/></Grid.RowDefinitions>
    <Grid>
-    <Border x:Name="BrowserHost" BorderBrush="#CBD2D9" BorderThickness="1"><wv:WebView2 x:Name="Browser"/></Border>
+    <Border x:Name="BrowserHost" BorderBrush="{DynamicResource ToolboxBorderBrush}" BorderThickness="1"><wv:WebView2 x:Name="Browser"/></Border>
     <TextBlock x:Name="PopOutHint" Text="网页已在独立窗口打开，资源仍会持续识别。关闭独立窗口即可放回这里。" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20" Visibility="Collapsed"/>
    </Grid>
-   <GridSplitter x:Name="BrowserHeightSplitter" Grid.Row="1" Height="8" HorizontalAlignment="Stretch" VerticalAlignment="Center" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" ShowsPreview="True" Background="#CBD2D9" ToolTip="上下拖动调整网页与资源列表的高度"/>
+   <GridSplitter x:Name="BrowserHeightSplitter" Grid.Row="1" Height="8" HorizontalAlignment="Stretch" VerticalAlignment="Center" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" ShowsPreview="True" Background="{DynamicResource ToolboxBorderBrush}" ToolTip="上下拖动调整网页与资源列表的高度"/>
    <Grid Grid.Row="2"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
   <WrapPanel Margin="0,6">
-   <ComboBox x:Name="KindFilter" Width="120" Height="32" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="8,0" Margin="4" SelectedIndex="0" SelectionChanged="FilterChanged"><ComboBoxItem Content="全部资源"/><ComboBoxItem Content="图片"/><ComboBoxItem Content="视频"/></ComboBox>
+   <ComboBox x:Name="KindFilter" Width="120" Height="32" MinHeight="32" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="8,0" Margin="4" SelectedIndex="0" SelectionChanged="FilterChanged"><ComboBoxItem Content="全部资源"/><ComboBoxItem Content="图片"/><ComboBoxItem Content="视频"/></ComboBox>
    <Button Content="全选当前列表" Click="SelectAll"/><Button Content="取消选择" Click="ClearSelection"/>
    <Button Content="解析当前页面视频" Click="InspectPage"/><Button Content="读取所选视频清晰度" Click="InspectSelected"/>
    <Button Content="清空资源列表" Click="ClearResources"/>
@@ -69,6 +65,6 @@
     <DataGridTextColumn Header="进度" Binding="{Binding PercentText}" Width="85"/>
    </DataGrid.Columns>
   </DataGrid>
-  <TextBlock x:Name="Status" Grid.Row="7" Text="普通权限浏览 · 仅识别当前页面 · 请只下载有权保存的资源。不支持 DRM 绕过。" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="#52606D"/>
+  <TextBlock x:Name="Status" Grid.Row="7" Text="普通权限浏览 · 仅识别当前页面 · 请只下载有权保存的资源。不支持 DRM 绕过。" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="{DynamicResource ToolboxMutedBrush}"/>
  </Grid>
 </Window>
