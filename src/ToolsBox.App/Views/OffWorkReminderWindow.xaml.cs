@@ -2,8 +2,10 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using ToolsBox.App.Infrastructure;
 using ToolsBox.App.WorkCountdown;
 using ToolsBox.Core.WorkCountdown;
 
@@ -11,7 +13,7 @@ namespace ToolsBox.App.Views;
 
 public partial class OffWorkReminderWindow : Window
 {
-    /// <summary>纸屑与烟花统一的节庆配色，六色在蓝底窗上都能看清。</summary>
+    /// <summary>纸屑与烟花统一的节庆配色，适用于深浅主题。</summary>
     private static readonly Color[] Palette =
     [
         Color.FromRgb(0xFF, 0xD4, 0x47), // 金
@@ -40,12 +42,20 @@ public partial class OffWorkReminderWindow : Window
     private double _elapsed;
     private int _nextFirework;
     private bool _closed;
+    private bool _isDarkTheme;
 
     public OffWorkReminderWindow(WorkCountdownViewModel countdown)
+        : this(countdown, ComfortAppearance.LoadDarkPreference()) { }
+
+    public OffWorkReminderWindow(WorkCountdownViewModel countdown, bool dark)
     {
         InitializeComponent();
         DataContext = countdown;
         _countdown = countdown;
+        SelectedArtworkKey = OffWorkArtworkCatalog.Select(DateOnly.FromDateTime(DateTime.Now));
+        ReminderArtworkImage.Source = OffWorkArtworkCatalog.GetImage(SelectedArtworkKey);
+        ApplyTheme(dark);
+        SourceInitialized += (_, _) => ComfortAppearance.UpdateCaption(this, _isDarkTheme);
         // 点击本窗的“下班”（或倒计时卡片上的“下班”）后，这扇“即将关机”警告已无意义，随任务结束自动关闭。
         _countdown.PropertyChanged += OnCountdownPropertyChanged;
         Loaded += OnLoaded;
@@ -55,6 +65,25 @@ public partial class OffWorkReminderWindow : Window
             _countdown.PropertyChanged -= OnCountdownPropertyChanged;
             StopCelebration();
         };
+    }
+
+    public string SelectedArtworkKey { get; }
+
+    public void ApplyTheme(bool dark)
+    {
+        _isDarkTheme = dark;
+        ComfortAppearance.Apply(this, dark);
+        if (dark)
+        {
+            var glow = new DropShadowEffect
+            {
+                Color = Color.FromRgb(0xEC, 0xF0, 0xF6), ShadowDepth = 0,
+                BlurRadius = 6, Opacity = 0.22, RenderingBias = RenderingBias.Quality
+            };
+            glow.Freeze();
+            ReminderArtworkImage.Effect = glow;
+        }
+        else ReminderArtworkImage.Effect = null;
     }
 
     private void OnCountdownPropertyChanged(object? sender, PropertyChangedEventArgs e)

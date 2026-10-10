@@ -1,10 +1,8 @@
 namespace ToolsBox.Core.WorkCountdown;
 
 /// <summary>
-/// 周一至周日的日常趣味文案，取材自网络上对一周七天的普遍情绪
-/// （周一综合征、周二难熬、周三小周末、周四盼周五、周五快乐、周六躺平、周日收心）。
-/// 每天提供多条按日期轮换，同一天内文案稳定；仅在当天没有节日文案时兜底显示，
-/// 不依赖节假日日历，任意年份均可使用。
+/// 结合当天有效类型与次日日历的日常趣味文案。
+/// 多条文案按日期轮换，同一天内稳定；无年度日历时只描述当天，不承诺休假。
 /// </summary>
 public static class WeekdayFunCopy
 {
@@ -13,45 +11,45 @@ public static class WeekdayFunCopy
     [
         // 周日
         [
-            "周日：假期余额不足，且用且珍惜",
-            "周日晚上的风，已经开始捎上周一的味道",
-            "周日宜收心、宜早睡，明日再战"
+            "给今天的自己续点电，慢慢把任务收好",
+            "先忙好眼前这一段，记得喝口水",
+            "日历继续翻，今天也按自己的节奏来"
         ],
         // 周一
         [
             "周一综合征：人到了，灵魂还在被窝里请假",
-            "周一不好，只是还没开始好，先续杯咖啡",
-            "周一：把周末存进银行，开始七天的还贷"
+            "还没开始好，先续杯咖啡",
+            "先把今天开个好头，给生活留点电"
         ],
         // 周二
         [
-            "周二是一周里最漫长的一天，周一的后悔还没消化完",
-            "周二，日历说还早，身体说好累",
-            "熬过周二，这周就算过了一半——虽然才过了两天"
+            "日历说还早，身体说好累",
+            "咖啡先到位，任务一件件来",
+            "给坚持到现在的自己点个赞"
         ],
         // 周三
         [
-            "周三小周末，一周过半，胜利在望",
-            "周三是分水岭，往后都是下坡路——往周末的方向",
-            "周三了，给坚持了三天的自己点个赞"
+            "忙里偷个小休息，给自己续点电",
+            "任务一件件收好，脚步可以慢一点",
+            "给坚持到现在的自己点个赞"
         ],
         // 周四
         [
-            "周四：周五的前奏，风里已经有周末的味道",
-            "周四过完，这周基本就算拿下了",
-            "周四，倒数第二个工作日的自我修养"
+            "先稳住今天的节奏，忙完再歇一歇",
+            "给今天的自己续杯咖啡",
+            "今天也值得一个深呼吸，任务慢慢来"
         ],
         // 周五
         [
-            "周五快乐！今天的风都是甜的",
-            "周五：下班铃一响，世界都是你的",
-            "周五，快乐就是今天的 KPI"
+            "给今天的自己加点快乐",
+            "把今天忙完，再切到生活频道",
+            "快乐也可以是今天的 KPI"
         ],
         // 周六
         [
-            "周六的正确姿势：睡到自然醒",
-            "周六：自由的味道，从赖床开始",
-            "周六不谈工作，谈谈风月"
+            "咖啡先来陪你上场，任务一件件来",
+            "忙今天的任务，也要照顾好自己",
+            "稳住今天的节奏，忙完记得歇一歇"
         ]
     ];
 
@@ -59,46 +57,125 @@ public static class WeekdayFunCopy
     [
         // 周日
         [
-            "周日收工，早睡早起迎周一",
-            "周日下班，把这一周的尾巴也好好收掉"
+            "收工，把今天的尾巴好好收掉",
+            "下班，把今晚留给生活"
         ],
         // 周一
         [
-            "周一首战告捷，今晚好好充电",
-            "周一准点收工，最难的一天过去了"
+            "收工，今晚好好充电",
+            "今天这一关过完了，给自己一个击掌"
         ],
         // 周二
         [
-            "周二收工，最难熬的一天过完了",
-            "周二下班，离周末又近了两步"
+            "收工，今天的任务先告一段落",
+            "下班，给今天的努力加个鸡腿"
         ],
         // 周三
         [
-            "周三下班，一周过半，今晚值得庆祝一下",
-            "周三收工，给坚持到现在的自己加个鸡腿"
+            "下班，今晚值得一个小奖励",
+            "收工，给坚持到现在的自己加个鸡腿"
         ],
         // 周四
         [
-            "周四收工，明晚就是周五夜",
-            "周四下班，周末已经在门口探头了"
+            "收工，今晚先把电充回来",
+            "下班，把工作收好，让今晚回到生活里"
         ],
         // 周五
         [
-            "周五收工，周末模式即刻启动",
-            "周五下班快乐，接下来的 48 小时归你"
+            "收工，给今天的自己一个击掌",
+            "下班快乐，今晚把时间留给自己"
         ],
         // 周六
         [
-            "周六收工，把觉补回来",
-            "周六下班，自由时间继续"
+            "收工，忙完这一段也要照顾好自己",
+            "下班，把今晚留给生活"
         ]
     ];
 
-    /// <summary>倒计时阶段的星期文案；任意日期均非空。</summary>
-    public static string Countdown(DateOnly date) => Pick(CountdownLines[(int)date.DayOfWeek], date.DayNumber);
+    private static readonly string[] RestCountdownLines =
+    [
+        "今天按自己的节奏来，给生活留点小快乐",
+        "把空闲留给想做的事，也给自己续点电",
+        "时间慢一点，小快乐也能多一点"
+    ];
+
+    private static readonly string[] UnknownCountdownLines =
+    [
+        "今天一步一步来，给自己续点电",
+        "按今天的节奏来，记得歇一歇",
+        "给今天的自己留点小快乐"
+    ];
+
+    /// <summary>倒计时阶段的星期文案；手动类型只应用于当天。</summary>
+    public static string Countdown(DateOnly date) => Countdown(date, null);
+
+    public static string Countdown(DateOnly date, DayKind? appliedKind)
+    {
+        DayKind kind = appliedKind ?? ChinaWorkCalendar.GetDay(date).Kind;
+        string[] lines = kind switch
+        {
+            DayKind.RestDay => RestCountdownLines,
+            DayKind.Workday => CountdownLines[(int)date.DayOfWeek],
+            _ => UnknownCountdownLines
+        };
+        return $"{DayDescription(date, kind, false)}，{Pick(lines, date.DayNumber)}";
+    }
 
     /// <summary>下班时刻的星期文案；任意日期均非空。</summary>
-    public static string OffWork(DateOnly date) => Pick(OffWorkLines[(int)date.DayOfWeek], date.DayNumber);
+    public static string OffWork(DateOnly date) => OffWork(date, null);
+
+    public static string OffWork(DateOnly date, DayKind? appliedKind)
+    {
+        DayKind kind = appliedKind ?? ChinaWorkCalendar.GetDay(date).Kind;
+        return $"{DayDescription(date, kind, true)}，{Pick(OffWorkLines[(int)date.DayOfWeek], date.DayNumber)}";
+    }
+
+    /// <summary>当天有效类型与已知次日安排；不把当天的手动类型延伸到明天。</summary>
+    public static string DayDescription(DateOnly date, DayKind kind, bool hasTask, DateOnly? referenceDate = null)
+    {
+        string weekday = date.DayOfWeek switch
+        {
+            DayOfWeek.Monday => "周一",
+            DayOfWeek.Tuesday => "周二",
+            DayOfWeek.Wednesday => "周三",
+            DayOfWeek.Thursday => "周四",
+            DayOfWeek.Friday => "周五",
+            DayOfWeek.Saturday => "周六",
+            _ => "周日"
+        };
+        HolidaySpan? holiday = ChinaWorkCalendar.GetHolidayAt(date);
+        string today = kind switch
+        {
+            DayKind.RestDay => holiday is HolidaySpan restHoliday
+                ? $"{restHoliday.Name}假期{(hasTask ? "加班" : "")}"
+                : hasTask ? "休息日加班" : "今天休息",
+            DayKind.Workday when holiday is HolidaySpan workHoliday => $"{workHoliday.Name}假期上班",
+            DayKind.Workday when ChinaWorkCalendar.IsMakeupWorkday(date) => "调休补班",
+            DayKind.Workday when date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday => "周末上班",
+            DayKind.Workday => "",
+            _ => "日期类型待确认"
+        };
+        DateOnly reference = referenceDate ?? date;
+        string day = reference == date ? weekday : $"{date:yyyy-MM-dd} {weekday}任务";
+        string description = today.Length == 0 ? day : $"{day}，{today}";
+        string tomorrow = TomorrowDescription(reference);
+        return tomorrow.Length == 0 ? description : $"{description}，{tomorrow}";
+    }
+
+    /// <summary>次日法定日历安排；无日历数据或已到日期上界时返回空串。</summary>
+    public static string TomorrowDescription(DateOnly date)
+    {
+        if (date == DateOnly.MaxValue) return "";
+        DateOnly tomorrow = date.AddDays(1);
+        return ChinaWorkCalendar.GetDay(tomorrow).Kind switch
+        {
+            DayKind.Workday when ChinaWorkCalendar.IsMakeupWorkday(tomorrow) => "明天调休补班",
+            DayKind.Workday => "明天上班",
+            DayKind.RestDay => ChinaWorkCalendar.GetHolidayAt(tomorrow) is HolidaySpan holiday
+                ? $"明天休息（{holiday.Name}假期）" : "明天休息",
+            _ => ""
+        };
+    }
 
     private static string Pick(string[] lines, int dayNumber) => lines[dayNumber % lines.Length];
 }

@@ -17,6 +17,7 @@ namespace ToolsBox.App;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
+    private bool _isDarkTheme;
     private ShellFileDropReceiver? _fileDrops;
     private readonly Action<WorkCountdownViewModel> _showOffWorkReminder;
     private readonly Action<WorkCountdownViewModel> _showWorkFinished;
@@ -36,14 +37,14 @@ public partial class MainWindow : Window
         try
         {
             if (_webResourceProcess is { HasExited: false })
-            { MessageBox.Show(this, "网页资源下载窗口已打开，请在任务栏切换到该窗口。"); return; }
+            { ComfortMessageBox.Show(this, "网页资源下载窗口已打开，请在任务栏切换到该窗口。"); return; }
             _webResourceProcess?.Dispose();
             _webResourceProcess = WebResources.WebResourceLauncher.Launch();
         }
         catch (Exception error)
         {
             string detail = error is Win32Exception native ? native.Message : $"启动异常：{error.GetType().Name}。";
-            MessageBox.Show(this, "无法以普通权限启动浏览窗口。\n\n" + detail + "\n\n这不是主程序缺少管理员权限。请保留上述错误信息用于排查。", "网页资源下载", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ComfortMessageBox.Show(this, "无法以普通权限启动浏览窗口。\n\n" + detail + "\n\n这不是主程序缺少管理员权限。请保留上述错误信息用于排查。", "网页资源下载", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -61,6 +62,8 @@ public partial class MainWindow : Window
     {
         ArgumentNullException.ThrowIfNull(countdown);
         InitializeComponent();
+        _isDarkTheme = ComfortAppearance.LoadDarkPreference();
+        ApplyAppearance();
         // 左下角版本号取自 csproj <Version>（较大改动时递增）；SourceLink 可能附加 +hash，不展示。
         VersionLabel.Text = "v" + ((typeof(MainWindow).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion ?? "0.0.0").Split('+')[0]);
@@ -106,7 +109,7 @@ public partial class MainWindow : Window
             try
             {
                 if (!_entireToolboxExit && _webResourceProcess is { HasExited: false } &&
-                    MessageBox.Show(this, "网页资源窗口仍在运行。退出工具箱会关闭该窗口并取消未完成的下载，确定退出？", "退出宝哥工具箱", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
+                    ComfortMessageBox.Show(this, "网页资源窗口仍在运行。退出工具箱会关闭该窗口并取消未完成的下载，确定退出？", "退出宝哥工具箱", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
                     args.Cancel = true;
             }
             catch (InvalidOperationException) { }
@@ -118,7 +121,7 @@ public partial class MainWindow : Window
     {
         // 窗口打开即挂载托盘图标（微信习惯）；创建失败只影响托盘入口，
         // 关闭窗口时 MinimizeToTray 会重试并回退为真实退出，绝不把程序卡死。
-        try { _trayIcon ??= new Infrastructure.TrayIcon(RestoreFromTray, ExitFromTray); }
+        try { _trayIcon ??= new Infrastructure.TrayIcon(RestoreFromTray, ExitFromTray, theme: () => _isDarkTheme); }
         catch (Exception) { _trayIcon = null; }
         await _viewModel.InitializeAsync();
     }
@@ -127,7 +130,7 @@ public partial class MainWindow : Window
     {
         if (_trayIcon is null)
         {
-            try { _trayIcon = new Infrastructure.TrayIcon(RestoreFromTray, ExitFromTray); }
+            try { _trayIcon = new Infrastructure.TrayIcon(RestoreFromTray, ExitFromTray, theme: () => _isDarkTheme); }
             catch (Exception error) { throw new InvalidOperationException("无法创建托盘图标。", error); }
         }
         bool wasVisible = IsVisible;
@@ -160,14 +163,17 @@ public partial class MainWindow : Window
     private void ShowWorkFinished(WorkCountdownViewModel countdown)
     {
         string flavor = countdown.HasFlavor ? $"\n{countdown.FlavorText}" : "";
-        MessageBox.Show(this, $"{countdown.FinishMessage}{flavor}\n\n{countdown.FinishDetails}", "下班提醒",
-            MessageBoxButton.OK, countdown.IsEarlyDeparture ? MessageBoxImage.Warning : MessageBoxImage.Information);
+        DateOnly date = DateOnly.FromDateTime(countdown.FinishedAt ?? DateTime.Now);
+        var artwork = OffWorkArtworkCatalog.GetImage(OffWorkArtworkCatalog.Select(date));
+        ComfortMessageBox.Show(this, $"{countdown.FinishMessage}{flavor}\n\n{countdown.FinishDetails}", "下班提醒",
+            MessageBoxButton.OK, countdown.IsEarlyDeparture ? MessageBoxImage.Warning : MessageBoxImage.Information,
+            artwork: artwork);
     }
 
     private void ShowOffWorkReminder(WorkCountdownViewModel countdown)
     {
         _offWorkReminder?.Close();
-        var reminder = new OffWorkReminderWindow(countdown);
+        var reminder = new OffWorkReminderWindow(countdown, _isDarkTheme);
         reminder.Closed += (_, _) => { if (ReferenceEquals(_offWorkReminder, reminder)) _offWorkReminder = null; };
         _offWorkReminder = reminder;
         // Modeless and not owned by the main window: it can be seen while the toolbox is minimized.
@@ -183,6 +189,7 @@ public partial class MainWindow : Window
 
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
+        ComfortAppearance.UpdateCaption(this, _isDarkTheme);
         try
         {
             IntPtr handle = new WindowInteropHelper(this).Handle;
@@ -202,6 +209,21 @@ public partial class MainWindow : Window
     {
         if (message == 0x0010 /* WM_CLOSE */) _closeFromUser = true;
         return IntPtr.Zero;
+    }
+
+    private void OnToggleTheme(object sender, RoutedEventArgs e)
+    {
+        _isDarkTheme = !_isDarkTheme;
+        ApplyAppearance();
+        ComfortAppearance.SaveDarkPreference(_isDarkTheme);
+    }
+
+    private void ApplyAppearance()
+    {
+        ComfortAppearance.Apply(this, _isDarkTheme);
+        _offWorkReminder?.ApplyTheme(_isDarkTheme);
+        _trayIcon?.ApplyTheme(_isDarkTheme);
+        ThemeToggleLabel.Text = _isDarkTheme ? "切换为浅色" : "切换为深色";
     }
 
     private void OnDropStateChanged(object? sender, PropertyChangedEventArgs e)
