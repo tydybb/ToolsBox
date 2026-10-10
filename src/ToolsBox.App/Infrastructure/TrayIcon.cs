@@ -11,15 +11,19 @@ internal sealed class TrayIcon : IDisposable
 {
     private readonly System.Windows.Forms.NotifyIcon _notifyIcon;
     private readonly System.Windows.Forms.ContextMenuStrip _menu;
+    private readonly Func<bool> _themeProvider;
 
-    public TrayIcon(Action restore, Action exit, bool visible = true)
+    public TrayIcon(Action restore, Action exit, bool visible = true, Func<bool>? theme = null)
     {
         ArgumentNullException.ThrowIfNull(restore);
         ArgumentNullException.ThrowIfNull(exit);
+        _themeProvider = theme ?? ComfortAppearance.LoadDarkPreference;
         _menu = new System.Windows.Forms.ContextMenuStrip();
         _menu.Items.Add("打开宝哥工具箱(&O)", null, (_, _) => restore());
         _menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         _menu.Items.Add("退出整个工具箱（含打卡提醒）(&X)", null, (_, _) => exit());
+        ApplyTheme(_themeProvider());
+        _menu.Opening += (_, _) => ApplyTheme(_themeProvider());
         _notifyIcon = new System.Windows.Forms.NotifyIcon
         {
             Text = "宝哥工具箱",
@@ -38,6 +42,8 @@ internal sealed class TrayIcon : IDisposable
     {
         if (_notifyIcon.Visible != visible) _notifyIcon.Visible = visible;
     }
+
+    public void ApplyTheme(bool dark) => ComfortTrayMenu.Apply(_menu, dark);
 
     /// <summary>显示一条“已最小化到托盘”气泡；提示失败不影响隐藏或退出流程。</summary>
     public void ShowBalloon(string title, string message)

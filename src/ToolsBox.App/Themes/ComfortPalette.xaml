@@ -1,0 +1,22 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="ToolboxBackgroundBrush" Color="#F5F7FB"/>
+    <SolidColorBrush x:Key="ToolboxSurfaceBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ToolboxSidebarBrush" Color="#EDF1F7"/>
+    <SolidColorBrush x:Key="ToolboxTextBrush" Color="#182536"/>
+    <SolidColorBrush x:Key="ToolboxMutedBrush" Color="#66758A"/>
+    <SolidColorBrush x:Key="ToolboxBorderBrush" Color="#E2E8F0"/>
+    <SolidColorBrush x:Key="ToolboxHoverBrush" Color="#F3F6FC"/>
+    <SolidColorBrush x:Key="ToolboxSelectionBrush" Color="#EAF2FF"/>
+    <SolidColorBrush x:Key="ToolboxAccentBrush" Color="#2369DA"/>
+    <SolidColorBrush x:Key="ToolboxAccentFillBrush" Color="#2369DA"/>
+    <SolidColorBrush x:Key="ToolboxAccentTextBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ToolboxInfoSurfaceBrush" Color="#EAF2FF"/>
+    <SolidColorBrush x:Key="ToolboxInfoTextBrush" Color="#315A8A"/>
+    <SolidColorBrush x:Key="ToolboxSuccessSurfaceBrush" Color="#E9F7EF"/>
+    <SolidColorBrush x:Key="ToolboxSuccessTextBrush" Color="#167448"/>
+    <SolidColorBrush x:Key="ToolboxWarningSurfaceBrush" Color="#FFF5DF"/>
+    <SolidColorBrush x:Key="ToolboxWarningTextBrush" Color="#996719"/>
+    <SolidColorBrush x:Key="ToolboxDangerSurfaceBrush" Color="#FFF0F0"/>
+    <SolidColorBrush x:Key="ToolboxDangerTextBrush" Color="#B42336"/>
+</ResourceDictionary>

@@ -1,0 +1,58 @@
+<Window x:Class="ToolsBox.App.Views.ComfortDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="540" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="False"
+        FontFamily="Microsoft YaHei UI" FontSize="14" UseLayoutRounding="True"
+        Background="{DynamicResource ToolboxBackgroundBrush}"
+        Foreground="{DynamicResource ToolboxTextBrush}">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Themes/ComfortControls.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Border x:Name="DialogCard" Style="{StaticResource ToolboxCardStyle}" Margin="16" Padding="22">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border x:Name="IconBadge" Width="42" Height="42" CornerRadius="12"
+                        Margin="0,0,14,0" Visibility="Collapsed">
+                    <TextBlock x:Name="IconSymbol" FontFamily="Segoe UI" FontWeight="SemiBold"
+                               FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock x:Name="DialogHeading" Grid.Column="1" FontSize="20" FontWeight="SemiBold"
+                           Foreground="{DynamicResource ToolboxTextBrush}" VerticalAlignment="Center"
+                           TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="60"/>
+            </Grid>
+            <Grid x:Name="DialogBody" Grid.Row="1" Margin="0,18,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="ArtworkColumn" Width="0"/>
+                </Grid.ColumnDefinitions>
+                <ScrollViewer x:Name="MessageScrollViewer" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled" CanContentScroll="False" MaxHeight="420">
+                    <TextBlock x:Name="DialogMessage" TextWrapping="Wrap" LineHeight="24"
+                               Foreground="{DynamicResource ToolboxTextBrush}"/>
+                </ScrollViewer>
+                <Image x:Name="DialogArtwork" Grid.Column="1" Width="180" Height="180"
+                       Margin="20,0,0,0" Visibility="Collapsed" Stretch="Uniform"
+                       VerticalAlignment="Center" IsHitTestVisible="False"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+            </Grid>
+            <Border x:Name="DialogFooter" Grid.Row="2" BorderBrush="{DynamicResource ToolboxBorderBrush}" BorderThickness="0,1,0,0"
+                    Margin="0,20,0,0" Padding="0,16,0,0">
+                <WrapPanel x:Name="ResultButtons" HorizontalAlignment="Right"/>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

@@ -21,7 +21,7 @@ public partial class App : Application
     {
         if(_exitChannel is null)return false;
         try{_exitChannel.RequestExit();BeginCoordinatedExit();}
-        catch(Exception){MessageBox.Show("无法通知其他工具箱进程退出，请重试。","退出失败");}
+        catch(Exception){ComfortMessageBox.Show("无法通知其他工具箱进程退出，请重试。","退出失败");}
         return true;
     }
     private void BeginCoordinatedExit()
@@ -145,7 +145,7 @@ public partial class App : Application
         }
         catch
         {
-            MessageBox.Show("启动需要管理员权限，但未能完成授权。请右键以管理员身份运行。", "宝哥工具箱", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ComfortMessageBox.Show("启动需要管理员权限，但未能完成授权。请右键以管理员身份运行。", "宝哥工具箱", MessageBoxButton.OK, MessageBoxImage.Warning);
             Shutdown(1);
             return;
         }
@@ -157,7 +157,7 @@ public partial class App : Application
         }
         catch
         {
-            MessageBox.Show("无法确认工具箱是否已运行，请先退出已有工具箱后重试。","宝哥工具箱");
+            ComfortMessageBox.Show("无法确认工具箱是否已运行，请先退出已有工具箱后重试。","宝哥工具箱");
             Shutdown(1);return;
         }
         ShutdownMode = ShutdownMode.OnMainWindowClose;
