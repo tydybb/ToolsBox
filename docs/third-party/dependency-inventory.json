@@ -1,0 +1,618 @@
+{
+  "schemaVersion": 1,
+  "auditedOn": "2026-10-22",
+  "scope": "App restore graph net8.0-windows/win-x64; includes build and placeholder packages. Publish conflict resolution can use shared-framework assemblies instead of package runtime assets.",
+  "inputs": [
+    "src/ToolsBox.App/ToolsBox.App.csproj",
+    "src/ToolsBox.Core/ToolsBox.Core.csproj",
+    "src/ToolsBox.Windows/ToolsBox.Windows.csproj",
+    "src/ToolsBox.MediaDownloads/ToolsBox.MediaDownloads.csproj",
+    "src/ToolsBox.App/obj/project.assets.json"
+  ],
+  "packages": [
+    {
+      "package": "Microsoft.Data.Sqlite/8.0.1",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/efcore",
+      "repositoryCommit": "423b1a0d38036efcefdbf1dfb80955449eae1238",
+      "runtimeFiles": [],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Data.Sqlite/8.0.1",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.Data.Sqlite.Core/8.0.1",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/efcore",
+      "repositoryCommit": "423b1a0d38036efcefdbf1dfb80955449eae1238",
+      "runtimeFiles": [
+        "lib/net8.0/Microsoft.Data.Sqlite.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Data.Sqlite.Core/8.0.1",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.Diagnostics.NETCore.Client/0.2.510501",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/diagnostics",
+      "repositoryCommit": "8c08c89a0643d31db91e119b1adb463be3e0ffe5",
+      "runtimeFiles": [
+        "lib/net6.0/Microsoft.Diagnostics.NETCore.Client.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Diagnostics.NETCore.Client/0.2.510501",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.Diagnostics.Tracing.TraceEvent/3.1.21",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": null,
+      "repositoryCommit": null,
+      "runtimeFiles": [
+        "lib/netstandard2.0/Dia2Lib.dll",
+        "lib/netstandard2.0/Microsoft.Diagnostics.FastSerialization.dll",
+        "lib/netstandard2.0/Microsoft.Diagnostics.Tracing.TraceEvent.dll",
+        "lib/netstandard2.0/TraceReloggerLib.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Diagnostics.Tracing.TraceEvent/3.1.21",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.DependencyInjection/6.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6",
+      "runtimeFiles": [
+        "lib/net6.0/Microsoft.Extensions.DependencyInjection.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection/6.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-6-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.DependencyInjection.Abstractions/6.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6",
+      "runtimeFiles": [
+        "lib/net6.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection.Abstractions/6.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-6-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.Logging/6.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6",
+      "runtimeFiles": [
+        "lib/netstandard2.1/Microsoft.Extensions.Logging.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Extensions.Logging/6.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-6-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.Logging.Abstractions/6.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6",
+      "runtimeFiles": [
+        "lib/net6.0/Microsoft.Extensions.Logging.Abstractions.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/6.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-6-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.Options/6.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6",
+      "runtimeFiles": [
+        "lib/netstandard2.1/Microsoft.Extensions.Options.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Extensions.Options/6.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-6-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.Extensions.Primitives/6.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6",
+      "runtimeFiles": [
+        "lib/net6.0/Microsoft.Extensions.Primitives.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Extensions.Primitives/6.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-6-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.NET.ILLink.Tasks/8.0.30",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "a83db3e0eb2defb6220e15dae2f1a0462fdbf99f",
+      "runtimeFiles": [],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.NET.ILLink.Tasks/8.0.30",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-RUNTIME-8.0.30-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.NETCore.Platforms/5.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "git://github.com/dotnet/runtime",
+      "repositoryCommit": "cf258a14b70ad9069470a108f13765e0e5988f51",
+      "runtimeFiles": [],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.NETCore.Platforms/5.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-5-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.Web.WebView2/1.0.4191.47",
+      "licenseType": "file",
+      "license": "LICENSE.txt",
+      "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": null,
+      "repositoryCommit": null,
+      "runtimeFiles": [],
+      "nativeFiles": [
+        "runtimes/win-x64/native/WebView2Loader.dll"
+      ],
+      "packagedNoticeFiles": [
+        "LICENSE.txt",
+        "NOTICE.txt"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.4191.47",
+      "providedLicenseTexts": [
+        "WEBVIEW2-1.0.4191.47-LICENSE.txt",
+        "WEBVIEW2-1.0.4191.47-NOTICE.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.Win32.Registry/5.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "git://github.com/dotnet/runtime",
+      "repositoryCommit": "cf258a14b70ad9069470a108f13765e0e5988f51",
+      "runtimeFiles": [
+        "runtimes/win/lib/netstandard2.0/Microsoft.Win32.Registry.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/Microsoft.Win32.Registry/5.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-5-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "SQLitePCLRaw.bundle_e_sqlite3/2.1.6",
+      "licenseType": "expression",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://licenses.nuget.org/Apache-2.0",
+      "copyright": "Copyright 2014-2023 SourceGear, LLC",
+      "repositoryUrl": "https://github.com/ericsink/SQLitePCL.raw",
+      "repositoryCommit": null,
+      "runtimeFiles": [
+        "lib/netstandard2.0/SQLitePCLRaw.batteries_v2.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [],
+      "nugetUrl": "https://www.nuget.org/packages/SQLitePCLRaw.bundle_e_sqlite3/2.1.6",
+      "providedLicenseTexts": [
+        "SQLITEPCLRAW-APACHE-2.0.txt"
+      ]
+    },
+    {
+      "package": "SQLitePCLRaw.core/2.1.6",
+      "licenseType": "expression",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://licenses.nuget.org/Apache-2.0",
+      "copyright": "Copyright 2014-2023 SourceGear, LLC",
+      "repositoryUrl": "https://github.com/ericsink/SQLitePCL.raw",
+      "repositoryCommit": null,
+      "runtimeFiles": [
+        "lib/netstandard2.0/SQLitePCLRaw.core.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [],
+      "nugetUrl": "https://www.nuget.org/packages/SQLitePCLRaw.core/2.1.6",
+      "providedLicenseTexts": [
+        "SQLITEPCLRAW-APACHE-2.0.txt"
+      ]
+    },
+    {
+      "package": "SQLitePCLRaw.lib.e_sqlite3/2.1.13",
+      "licenseType": "expression",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://licenses.nuget.org/Apache-2.0",
+      "copyright": "Copyright 2014-2024 SourceGear, LLC",
+      "repositoryUrl": "https://github.com/ericsink/SQLitePCL.raw",
+      "repositoryCommit": null,
+      "runtimeFiles": [],
+      "nativeFiles": [
+        "runtimes/win-x64/native/e_sqlite3.dll"
+      ],
+      "packagedNoticeFiles": [],
+      "nugetUrl": "https://www.nuget.org/packages/SQLitePCLRaw.lib.e_sqlite3/2.1.13",
+      "providedLicenseTexts": [
+        "SQLITEPCLRAW-APACHE-2.0.txt"
+      ]
+    },
+    {
+      "package": "SQLitePCLRaw.provider.e_sqlite3/2.1.6",
+      "licenseType": "expression",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://licenses.nuget.org/Apache-2.0",
+      "copyright": "Copyright 2014-2023 SourceGear, LLC",
+      "repositoryUrl": "https://github.com/ericsink/SQLitePCL.raw",
+      "repositoryCommit": null,
+      "runtimeFiles": [
+        "lib/net6.0-windows7.0/SQLitePCLRaw.provider.e_sqlite3.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [],
+      "nugetUrl": "https://www.nuget.org/packages/SQLitePCLRaw.provider.e_sqlite3/2.1.6",
+      "providedLicenseTexts": [
+        "SQLITEPCLRAW-APACHE-2.0.txt"
+      ]
+    },
+    {
+      "package": "System.Collections.Immutable/8.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "5535e31a712343a63f5d7d796cd874e563e5ac14",
+      "runtimeFiles": [
+        "lib/net8.0/System.Collections.Immutable.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/System.Collections.Immutable/8.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-8-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "System.Diagnostics.DiagnosticSource/6.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6",
+      "runtimeFiles": [
+        "lib/net6.0/System.Diagnostics.DiagnosticSource.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/System.Diagnostics.DiagnosticSource/6.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-6-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "System.Memory/4.5.3",
+      "licenseType": null,
+      "license": "MIT (LICENSE.TXT in package)",
+      "licenseUrl": "https://github.com/dotnet/corefx/blob/master/LICENSE.TXT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": null,
+      "repositoryCommit": null,
+      "runtimeFiles": [],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/System.Memory/4.5.3",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-MEMORY-4.5.3-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "System.Reflection.Metadata/8.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "5535e31a712343a63f5d7d796cd874e563e5ac14",
+      "runtimeFiles": [
+        "lib/net8.0/System.Reflection.Metadata.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/System.Reflection.Metadata/8.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-8-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "System.Reflection.TypeExtensions/4.7.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": null,
+      "repositoryCommit": null,
+      "runtimeFiles": [],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/System.Reflection.TypeExtensions/4.7.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-REFLECTION-4.7.0-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "System.Runtime.CompilerServices.Unsafe/6.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "4822e3c3aa77eb82b2fb33c9321f923cf11ddde6",
+      "runtimeFiles": [
+        "lib/net6.0/System.Runtime.CompilerServices.Unsafe.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/System.Runtime.CompilerServices.Unsafe/6.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-6-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "System.Security.AccessControl/5.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "git://github.com/dotnet/runtime",
+      "repositoryCommit": "cf258a14b70ad9069470a108f13765e0e5988f51",
+      "runtimeFiles": [
+        "runtimes/win/lib/netcoreapp2.0/System.Security.AccessControl.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/System.Security.AccessControl/5.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-5-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "System.Security.Principal.Windows/5.0.0",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "git://github.com/dotnet/runtime",
+      "repositoryCommit": "cf258a14b70ad9069470a108f13765e0e5988f51",
+      "runtimeFiles": [
+        "runtimes/win/lib/netcoreapp2.1/System.Security.Principal.Windows.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/System.Security.Principal.Windows/5.0.0",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-5-PACKAGES-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "System.Text.Json/8.0.5",
+      "licenseType": "expression",
+      "license": "MIT",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "copyright": "© Microsoft Corporation. All rights reserved.",
+      "repositoryUrl": "https://github.com/dotnet/runtime",
+      "repositoryCommit": "81cabf2857a01351e5ab578947c7403a5b128ad1",
+      "runtimeFiles": [
+        "lib/net8.0/System.Text.Json.dll"
+      ],
+      "nativeFiles": [],
+      "packagedNoticeFiles": [
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT"
+      ],
+      "nugetUrl": "https://www.nuget.org/packages/System.Text.Json/8.0.5",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-RUNTIME-8.0.30-THIRD-PARTY-NOTICES.txt"
+      ]
+    }
+  ],
+  "additionalBuildAssets": [
+    {
+      "package": "Microsoft.Web.WebView2/1.0.4191.47",
+      "source": "build/Common.targets",
+      "files": [
+        "Microsoft.Web.WebView2.Core.dll",
+        "Microsoft.Web.WebView2.Wpf.dll",
+        "Microsoft.Web.WebView2.WinForms.dll"
+      ],
+      "note": "Managed SDK references are added by targets and therefore are absent from assets.runtime."
+    },
+    {
+      "package": "Microsoft.Diagnostics.Tracing.TraceEvent/3.1.21",
+      "source": "build/Microsoft.Diagnostics.Tracing.TraceEvent.props; buildTransitive/Microsoft.Diagnostics.Tracing.TraceEvent.props",
+      "files": [
+        "KernelTraceControl.dll",
+        "KernelTraceControl.Win61.dll (x86 only)",
+        "msdia140.dll",
+        "Dia2Lib.dll",
+        "TraceReloggerLib.dll"
+      ],
+      "note": "Architecture conditions in the package determine which auxiliary files are copied."
+    }
+  ],
+  "selfContainedFrameworks": [
+    {
+      "package": "Microsoft.NETCore.App.Runtime.win-x64/8.0.30",
+      "license": "MIT with third-party notices",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "DOTNET-RUNTIME-8.0.30-THIRD-PARTY-NOTICES.txt"
+      ]
+    },
+    {
+      "package": "Microsoft.WindowsDesktop.App.Runtime.win-x64/8.0.30",
+      "license": "MIT with third-party notices",
+      "providedLicenseTexts": [
+        "DOTNET-LICENSE-MIT.txt",
+        "WPF-8.0.30-THIRD-PARTY-NOTICES.txt",
+        "WINFORMS-8.0.30-THIRD-PARTY-NOTICES.txt"
+      ]
+    }
+  ],
+  "notBundled": [
+    "Microsoft Edge WebView2 Runtime",
+    "yt-dlp",
+    "FFmpeg",
+    "ffprobe"
+  ]
+}

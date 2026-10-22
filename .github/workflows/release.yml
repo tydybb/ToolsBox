@@ -1,0 +1,135 @@
+name: Windows release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - name: Check out tagged source and main history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate version, tag, and main ancestry
+        id: version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $versions = @(Select-Xml -LiteralPath src/ToolsBox.App/ToolsBox.App.csproj -XPath '/Project/PropertyGroup/Version')
+          if ($versions.Count -ne 1) { throw 'The app must have exactly one Version.' }
+          $version = $versions[0].Node.InnerText
+          if ($version -notmatch '^\d+\.\d+\.\d+(?:\.\d+)?$' -or $env:RELEASE_TAG -cne "v$version") {
+            throw 'The tag must exactly match v followed by the app Version.'
+          }
+          $head = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve HEAD.' }
+          $tagCommit = git rev-parse "refs/tags/$($env:RELEASE_TAG)^{commit}"
+          if ($LASTEXITCODE -ne 0 -or $tagCommit -ne $head) { throw 'HEAD does not match the release tag.' }
+          git merge-base --is-ancestor HEAD refs/remotes/origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'The release commit must belong to origin/main.' }
+          $notes = "docs/releases/$($env:RELEASE_TAG).md"
+          if (-not (Test-Path -LiteralPath $notes -PathType Leaf)) { throw "Missing release notes: $notes" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 8.0.x
+      - name: Verify release packaging with synthetic files
+        shell: pwsh
+        run: ./scripts/Test-ReleasePackaging.ps1
+      - name: Run the same safe test projects as CI
+        shell: pwsh
+        run: ./scripts/Test-CI.ps1
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-test-results-${{ github.ref_name }}
+          path: TestResults/**/*.trx
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Publish both portable Windows x64 modes
+        shell: pwsh
+        run: |
+          & ./scripts/Publish-Portable.ps1 -Mode SelfContained -NoPause
+          if ($LASTEXITCODE -ne 0) { throw 'Self-contained publish failed.' }
+          $runtimeConfig = Get-Content -LiteralPath 'src/ToolsBox.App/bin/Release/net8.0-windows/win-x64/宝哥工具箱.runtimeconfig.json' -Raw | ConvertFrom-Json
+          foreach ($name in @('Microsoft.NETCore.App', 'Microsoft.WindowsDesktop.App')) {
+            $framework = @($runtimeConfig.runtimeOptions.includedFrameworks | Where-Object name -CEQ $name)
+            if ($framework.Count -ne 1 -or $framework[0].version -cne '8.0.30') {
+              throw "The bundled $name runtime must be exactly 8.0.30 to match the shipped license notices."
+            }
+          }
+          & ./scripts/Publish-Portable.ps1 -Mode FrameworkDependent -NoPause
+          if ($LASTEXITCODE -ne 0) { throw 'Framework-dependent publish failed.' }
+      - name: Package executables, licenses, and checksums
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $selfContained = @(Get-ChildItem -LiteralPath bin/publish/self-contained-win-x64 -Directory)
+          $frameworkDependent = @(Get-ChildItem -LiteralPath bin/publish/framework-dependent-win-x64 -Directory)
+          if ($selfContained.Count -ne 1 -or $frameworkDependent.Count -ne 1) { throw 'Expected one fresh publish directory per mode.' }
+          foreach ($directory in @($selfContained[0], $frameworkDependent[0])) {
+            $executable = Join-Path $directory.FullName '宝哥工具箱.exe'
+            $fileVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($executable).FileVersion
+            if ($fileVersion -cne $env:RELEASE_VERSION) { throw 'A published executable does not match the release version.' }
+          }
+          ./scripts/Package-Release.ps1 -Version $env:RELEASE_VERSION `
+            -SelfContainedDirectory $selfContained[0].FullName `
+            -FrameworkDependentDirectory $frameworkDependent[0].FullName `
+            -OutputDirectory bin/release
+      - name: Upload all assets to a draft, verify them, then publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $releaseUrl = "$env:GITHUB_API_URL/repos/$env:GITHUB_REPOSITORY/releases/tags/$env:RELEASE_TAG"
+          $headers = @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/vnd.github+json' }
+          $existing = $null
+          try { $existing = Invoke-RestMethod -Uri $releaseUrl -Headers $headers }
+          catch {
+            if ([int]$_.Exception.Response.StatusCode -ne 404) { throw }
+          }
+          if ($null -ne $existing -and -not $existing.draft) {
+            throw 'A published release already exists; refusing to overwrite it.'
+          }
+          $notes = "docs/releases/$($env:RELEASE_TAG).md"
+          if ($null -eq $existing) {
+            gh release create $env:RELEASE_TAG --draft --verify-tag --title "ToolsBox $env:RELEASE_TAG" --notes-file $notes
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot create the draft release.' }
+          }
+          else {
+            gh release edit $env:RELEASE_TAG --draft --title "ToolsBox $env:RELEASE_TAG" --notes-file $notes
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot update the existing draft release.' }
+          }
+          $assets = @(Get-ChildItem -LiteralPath bin/release -File)
+          if ($assets.Count -ne 7) { throw 'Expected both EXEs, both ZIPs, checksums, LICENSE, and NOTICE.md.' }
+          gh release upload $env:RELEASE_TAG @($assets.FullName) --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Asset upload failed; the release remains a draft.' }
+          $draft = Invoke-RestMethod -Uri $releaseUrl -Headers $headers
+          if (-not $draft.draft -or $draft.assets.Count -ne $assets.Count) { throw 'Draft state or uploaded asset count changed.' }
+          foreach ($asset in $assets) {
+            $remote = @($draft.assets | Where-Object name -CEQ $asset.Name)
+            if ($remote.Count -ne 1 -or $remote[0].size -ne $asset.Length) { throw "Uploaded asset verification failed: $($asset.Name)" }
+          }
+          gh release edit $env:RELEASE_TAG --draft=false
+          if ($LASTEXITCODE -ne 0) { throw 'All assets are uploaded, but publishing the draft failed.' }
