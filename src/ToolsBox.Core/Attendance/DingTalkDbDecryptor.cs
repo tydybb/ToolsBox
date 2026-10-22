@@ -6,7 +6,7 @@ namespace ToolsBox.Core.Attendance;
 
 public sealed record DecryptOutcome(int PageCount, int WalFramesApplied, bool WalSkipped);
 
-/// <summary>Version-limited local format reader. Only complete, checksum-validated encrypted WAL is merged.</summary>
+/// <summary>Version-limited local format reader. Only committed, checksum-validated encrypted WAL frames are merged.</summary>
 public static class DingTalkDbDecryptor
 {
     public const int PageSize = 4096;
@@ -48,20 +48,23 @@ public static class DingTalkDbDecryptor
     private static byte[] MergeWal(byte[] key, byte[] main, byte[] wal)
     {
         const int frameSize = 24 + PageSize;
-        if (wal.Length < 32 || (wal.Length - 32) % frameSize != 0) throw new InvalidDataException("WAL 帧不完整。");
+        if (wal.Length < 32) throw new InvalidDataException("WAL 帧不完整。");
         uint magic = Read(wal, 0);
         if (magic is not (0x377f0682 or 0x377f0683) || Read(wal, 4) != 3007000 || Read(wal, 8) != PageSize)
             throw new InvalidDataException("WAL 版本不受支持。");
         bool little = magic == 0x377f0682;
         var sum = Checksum(wal.AsSpan(0, 24), 0, 0, little);
         if (sum.Item1 != Read(wal, 24) || sum.Item2 != Read(wal, 28)) throw new InvalidDataException("WAL 头校验失败。");
+        // A reused WAL may retain old frames, reserved bytes, or a torn physical tail after its current cycle.
         int frames = (wal.Length - 32) / frameSize, lastCommit = -1, finalPages = main.Length / PageSize;
         for (int i = 0; i < frames; i++)
         {
             int offset = 32 + i * frameSize;
+            if (wal.AsSpan(offset, 24).IndexOfAnyExcept((byte)0) < 0 ||
+                !wal.AsSpan(offset + 8, 8).SequenceEqual(wal.AsSpan(16, 8))) break;
             uint page = Read(wal, offset), size = Read(wal, offset + 4);
-            if (page == 0 || page > MaximumDatabaseBytes / PageSize || size > MaximumDatabaseBytes / PageSize ||
-                !wal.AsSpan(offset + 8, 8).SequenceEqual(wal.AsSpan(16, 8))) throw new InvalidDataException("WAL 帧头无效。");
+            if (page == 0 || page > MaximumDatabaseBytes / PageSize || size > MaximumDatabaseBytes / PageSize)
+                throw new InvalidDataException("WAL 帧头无效。");
             sum = Checksum(wal.AsSpan(offset, 8), sum.Item1, sum.Item2, little);
             sum = Checksum(wal.AsSpan(offset + 24, PageSize), sum.Item1, sum.Item2, little);
             if (sum.Item1 != Read(wal, offset + 16) || sum.Item2 != Read(wal, offset + 20)) throw new InvalidDataException("WAL 帧校验失败。");

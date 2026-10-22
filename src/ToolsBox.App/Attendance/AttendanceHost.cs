@@ -19,6 +19,7 @@ public sealed class AttendanceHost : IDisposable
     private readonly Mutex _instance;
     private readonly AttendanceCoordinator _coordinator;
     private readonly AttendancePreviewWorker _preview;
+    private readonly AttendanceReadClient _reader = new();
     private readonly DispatcherTimer _timer;
     private readonly TrayIcon _tray;
     private AttendanceReminderWindow? _reminder;
@@ -34,9 +35,8 @@ public sealed class AttendanceHost : IDisposable
     private AttendanceHost(Mutex instance)
     {
         _instance=instance;
-        _preview=new AttendancePreviewWorker(_store,(directory,now)=>Task.Run(()=>new DingTalkAttendanceChecker(new DingTalkDataLocator([directory])).Check(now)));
-        _coordinator=new AttendanceCoordinator(_store,(options,now)=>Task.Run(()=>
-            new DingTalkAttendanceChecker(string.IsNullOrWhiteSpace(options.AccountDirectory)?null:new DingTalkDataLocator([options.AccountDirectory])).Check(now)));
+        _preview=new AttendancePreviewWorker(_store,(directory,now)=>_reader.CheckAsync(directory,now),canPublish:()=>!_disposed);
+        _coordinator=new AttendanceCoordinator(_store,(options,now)=>_reader.CheckAsync(options.AccountDirectory,now));
         _coordinator.ReminderDue+=OnReminder;
         _tray=new TrayIcon(ShowSettings,()=>{if(Application.Current is App app && app.ExitEntireToolbox())return;Application.Current.Shutdown();},visible:!HasMainConsumer());
         _timer=new DispatcherTimer{Interval=TimeSpan.FromSeconds(2)};_timer.Tick+=OnTick;
@@ -132,6 +132,7 @@ public sealed class AttendanceHost : IDisposable
     public void Dispose()
     {
         if(_disposed)return;_disposed=true;_timer.Stop();_timer.Tick-=OnTick;
+        _reader.Dispose();
         SystemEvents.SessionSwitch-=OnSession;SystemEvents.PowerModeChanged-=OnPower;
         _coordinator.ReminderDue-=OnReminder;_reminder?.Close();_settings?.Close();CloseBackground();_tray.Dispose();
         _instance.ReleaseMutex();_instance.Dispose();

@@ -44,6 +44,15 @@ public partial class App : Application
         // Helpers share this executable but must remain headless across awaits.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         base.OnStartup(e);
+        // One ordinary read per process: a failed SQLite initializer cannot poison the resident agent.
+        // Invalid worker arguments must never fall through to administrator/main-window startup.
+        if (e.Args.Contains("--attendance-read-worker", StringComparer.Ordinal))
+        {
+            if (e.Args.Length != 1) { Shutdown(1); return; }
+            try { Shutdown(await Attendance.AttendanceReadWorker.RunAsync()); }
+            catch { Shutdown(1); }
+            return;
+        }
         if(e.Args.Length==0 || e.Args.Contains("--administrator-start") || e.Args.Contains("--attendance-agent") || e.Args.Contains("--web-resources"))
         {
             _exitChannel=new ToolboxExitChannel();

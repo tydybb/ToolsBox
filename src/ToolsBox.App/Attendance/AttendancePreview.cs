@@ -9,14 +9,14 @@ public sealed record AttendancePreviewRequest(Guid Id,string Directory,DateTime 
 public sealed record AttendancePreviewResult(Guid Id,string Directory,DateTime CheckedAt,DateTime? ClockInAt,string Message);
 
 /// <summary>Isolated preview channel; never writes options or the active attendance snapshot.</summary>
-public sealed class AttendancePreviewWorker(AttendanceStore store,Func<string,DateTime,Task<AttendanceStatus>> read,Func<DateTime>? clock=null)
+public sealed class AttendancePreviewWorker(AttendanceStore store,Func<string,DateTime,Task<AttendanceStatus>> read,Func<DateTime>? clock=null,Func<bool>? canPublish=null)
 {
     private bool _busy;
     private Guid? _handled;
     private readonly Func<DateTime> _now=clock??(()=>DateTime.Now);
     public async Task TickAsync()
     {
-        if(_busy || !store.LoadOptions().Enabled)return;
+        if(_busy || canPublish?.Invoke()==false || !store.LoadOptions().Enabled)return;
         var request=store.LoadPreviewRequest();var now=_now();
         if(request is null || request.Id==_handled || request.RequestedAt.Date!=now.Date || now-request.RequestedAt>TimeSpan.FromMinutes(2) || request.RequestedAt>now || !Path.IsPathFullyQualified(request.Directory))return;
         _busy=true;_handled=request.Id;
@@ -26,10 +26,11 @@ public sealed class AttendancePreviewWorker(AttendanceStore store,Func<string,Da
             try{status=await read(request.Directory,now);}
             catch{status=AttendanceStatus.Failure("本地读取失败，请检查目录权限或钉钉版本。");}
             var completed=_now();
-            if(!store.LoadOptions().Enabled || completed.Date!=now.Date || store.LoadPreviewRequest()?.Id!=request.Id)return;
+            if(canPublish?.Invoke()==false || !store.LoadOptions().Enabled || completed.Date!=now.Date || store.LoadPreviewRequest()?.Id!=request.Id)return;
             DateTime? at=null;
             if(status.Obtained && status.ClockedIn && TimeOnly.TryParseExact(status.ClockInTime,["HH:mm","H:mm","HH:mm:ss"],CultureInfo.InvariantCulture,DateTimeStyles.None,out var time))
             {var candidate=now.Date.Add(time.ToTimeSpan());if(candidate<=completed)at=candidate;}
+            if(canPublish?.Invoke()==false)return;
             store.SavePreviewResult(new(request.Id,request.Directory,completed,at,
                 at is DateTime found?$"今日上班打卡：{found:HH:mm}（辅助识别）":"尚未确认今日打卡。"+(status.Error??"请在钉钉核对。")));
         }

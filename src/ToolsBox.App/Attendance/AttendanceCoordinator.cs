@@ -26,7 +26,7 @@ public sealed class AttendanceCoordinator
         if(!manual && (options.ManualConfirmedOn==today || IsConfirmed(previous,options,now)))return;
         if(_busy)
         {
-            if(options.Enabled && options.IsWorkday(today) && unlocked && stillUnlocked?.Invoke()!=false && now.Hour==9 && now.Minute==25 && _policy.TryRemind(now,options.ManualConfirmedOn))
+            if(options.Enabled && options.IsWorkday(today) && unlocked && stillUnlocked?.Invoke()!=false && !IsConfirmed(previous,options,now) && now.Hour==9 && now.Minute==25 && _policy.TryRemind(now,options.ManualConfirmedOn))
             {
                 _store.SaveSnapshot(new(now,null,options.AccountDirectory,"尚未确认今日打卡，读取仍在进行，请检查钉钉。",_policy.LastReminder,_policy.FinalReminderDate));
                 ReminderDue?.Invoke(this,EventArgs.Empty);
@@ -49,15 +49,19 @@ public sealed class AttendanceCoordinator
                 DateTime actual=now.Date.Add(time.ToTimeSpan());
                 if(actual<=completed)clockIn=actual;
             }
+            bool freshlyConfirmed=clockIn is not null;
+            var latest=_store.LoadSnapshot();
+            if(clockIn is null && IsConfirmed(latest,current,completed))clockIn=latest!.ClockInAt;
             bool remind=!manual && clockIn is null && _policy.TryRemind(completed,current.ManualConfirmedOn);
-            string message=clockIn is DateTime at ? $"已读取本地上班打卡：{at:HH:mm}（辅助识别）" :
+            string message=clockIn is DateTime at ? freshlyConfirmed ? $"已读取本地上班打卡：{at:HH:mm}（辅助识别）" :
+                $"本次读取未确认今日打卡，保留此前确认的上班打卡：{at:HH:mm}（辅助识别）。" + (string.IsNullOrWhiteSpace(result.Error)?"": " " + result.Error) :
                 "尚未确认今日打卡，请检查钉钉。" + (string.IsNullOrWhiteSpace(result.Error)?"": " " + result.Error);
             _store.SaveSnapshot(new(completed,clockIn,options.AccountDirectory,message,_policy.LastReminder,_policy.FinalReminderDate,
-                manual ? options.CheckRequestedAt : previous?.CompletedRequest));
+                manual ? options.CheckRequestedAt : latest?.CompletedRequest));
             if(remind)ReminderDue?.Invoke(this,EventArgs.Empty);
         }
         finally { _busy=false; }
     }
     public static bool IsConfirmed(AttendanceSnapshot? snapshot,AttendanceOptions options,DateTime now) =>
-        snapshot?.ClockInAt is DateTime at && at.Date==now.Date && at<=now && snapshot.CheckedAt.Date==now.Date && snapshot.AccountDirectory==options.AccountDirectory;
+        snapshot?.ClockInAt is DateTime at && at.Date==now.Date && at<=now && snapshot.CheckedAt.Date==now.Date && snapshot.CheckedAt<=now && snapshot.AccountDirectory==options.AccountDirectory;
 }

@@ -9,6 +9,9 @@
   <ItemGroup>
     <!-- 仅打卡可选功能使用：读取本机解密后的钉钉消息库。 -->
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.1" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.13" GeneratePathProperty="true" />
+    <EmbeddedResource Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\win-x64\native\e_sqlite3.dll"
+                      LogicalName="ToolsBox.Core.Attendance.Native.win-x64.e_sqlite3.dll" />
   </ItemGroup>
 
 </Project>
