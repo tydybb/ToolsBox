@@ -396,9 +396,10 @@ public sealed class CountdownCompanionInteractionTests
     {
         Type? type = typeof(App).Assembly.GetType("ToolsBox.App.WorkCountdown.CountdownCompanion");
         Assert.NotNull(type);
-        object? instance = animationPreference is null
-            ? Activator.CreateInstance(type!)
-            : Activator.CreateInstance(type!, BindingFlags.Instance | BindingFlags.NonPublic, null, [animationPreference], null);
+        // Select the policy in the test; explicit reduced-motion cases still inject false.
+        animationPreference ??= () => true;
+        object? instance = Activator.CreateInstance(type!, BindingFlags.Instance | BindingFlags.NonPublic,
+            null, [animationPreference], null);
         var companion = Assert.IsAssignableFrom<FrameworkElement>(instance);
         Set(companion, "AnimationKey", "lipu/calm");
         Set(companion, "CharacterName", "厘普");

@@ -297,7 +297,9 @@ public sealed class CountdownCompanionTests
     {
         Type? type = typeof(App).Assembly.GetType("ToolsBox.App.WorkCountdown.CountdownCompanion");
         Assert.NotNull(type);
-        var companion = Assert.IsAssignableFrom<FrameworkElement>(Activator.CreateInstance(type!));
+        // Motion behavior must not depend on the runner's Windows accessibility preference.
+        var companion = Assert.IsAssignableFrom<FrameworkElement>(Activator.CreateInstance(type!,
+            BindingFlags.Instance | BindingFlags.NonPublic, null, [new Func<bool>(() => true)], null));
         Set(companion, "AnimationKey", key);
         Set(companion, "CharacterName", name);
         Assert.True(Get<bool>(companion, "AnimationEnabled"));
