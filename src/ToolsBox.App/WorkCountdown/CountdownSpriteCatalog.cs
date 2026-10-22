@@ -30,26 +30,29 @@ internal static class CountdownSpriteCatalog
         {
             if (!Atlases.TryGetValue(atlasKey, out IReadOnlyList<BitmapSource>[]? atlas))
             {
-                atlas = LoadResource(atlasKey);
+                atlas = CreateOriginalAtlas(character, walking);
                 Atlases.Add(atlasKey, atlas);
             }
             return atlas.Length == Rows ? atlas[row] : [];
         }
     }
 
-    private static IReadOnlyList<BitmapSource>[] LoadResource(string character)
+    private static IReadOnlyList<BitmapSource>[] CreateOriginalAtlas(string character, bool walking)
     {
-        try
+        // These keys retain existing state/data contracts; the pictures are original geometric robots.
+        int variant = character switch
         {
-            string assembly = typeof(CountdownSpriteCatalog).Assembly.GetName().Name!;
-            var uri = new Uri($"/{assembly};component/Assets/Countdown/{character}.png", UriKind.Relative);
-            var resource = Application.GetResourceStream(uri);
-            return resource is null ? [] : DecodeAlignedAtlas(resource.Stream);
-        }
-        catch (Exception exception) when (IsResourceFailure(exception))
+            "lipu" => 0, "duodong" => 1, "xiuzhen" => 2, "tianzhong" => 3, _ => 4
+        };
+        var atlas = new IReadOnlyList<BitmapSource>[Rows];
+        for (int row = 0; row < Rows; row++)
         {
-            return [];
+            var frames = new BitmapSource[Columns];
+            for (int column = 0; column < Columns; column++)
+                frames[column] = OriginalCountdownArtwork.CreateFrame(variant, row, walking, column);
+            atlas[row] = Array.AsReadOnly(frames);
         }
+        return atlas;
     }
 
     internal static IReadOnlyList<BitmapSource>[] DecodeAtlas(Stream stream) => Decode(stream, false);

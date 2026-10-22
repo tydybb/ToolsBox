@@ -9,3 +9,7 @@ obj/
 .worktrees/
 .workbuddy/
 /AGENTS.md
+
+# Private legacy artwork: retained locally, not licensed for public distribution.
+/src/ToolsBox.App/Assets/Countdown/*.png
+/TestResults/

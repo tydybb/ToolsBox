@@ -1,6 +1,5 @@
 using System.Buffers.Binary;
 using System.IO;
-using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace ToolsBox.App.WorkCountdown;
@@ -42,23 +41,11 @@ internal static class OffWorkArtworkCatalog
         {
             if (!Images.TryGetValue(key, out BitmapSource? image))
             {
-                image = LoadResource(key);
+                image = OriginalCountdownArtwork.CreateReminder(Array.IndexOf(Keys, key));
                 Images.Add(key, image);
             }
             return image;
         }
-    }
-
-    private static BitmapSource? LoadResource(string key)
-    {
-        try
-        {
-            string assembly = typeof(OffWorkArtworkCatalog).Assembly.GetName().Name!;
-            var uri = new Uri($"/{assembly};component/Assets/Countdown/offwork-{key}.png", UriKind.Relative);
-            var resource = Application.GetResourceStream(uri);
-            return resource is null ? null : DecodeImage(resource.Stream);
-        }
-        catch (Exception exception) when (IsResourceFailure(exception)) { return null; }
     }
 
     internal static BitmapSource? DecodeImage(Stream stream)
