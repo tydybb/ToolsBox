@@ -98,9 +98,10 @@ public sealed class WorkCountdownFlavorTests
     [Fact]
     public void FlavorText_RestDayWithOvertimeTask_UsesOvertimeVoiceNotWeekendLaze()
     {
-        // 2026-11-14 是周六休息日（默认加班 4 小时）：不能显示“睡到自然醒”。
+        // 2026-11-14 是周六休息日：显式安排 4 小时加班后不能显示“睡到自然醒”。
         using var vm = new WorkCountdownViewModel(() => new(2026, 11, 14, 9, 30, 0), new EmptyStore(), false);
         vm.StartTimeText = "09:30";
+        vm.OvertimeText = "4";
         vm.StartCommand.Execute(null);
         Assert.True(vm.HasOvertime);
         Assert.Contains("班", vm.FlavorText);
@@ -147,6 +148,7 @@ public sealed class WorkCountdownFlavorTests
         DateTime now = new(2026, 11, 14, 9, 30, 0);
         using var vm = new WorkCountdownViewModel(() => now, new EmptyStore(), false);
         vm.StartTimeText = "09:30";
+        vm.OvertimeText = "4";
         vm.StartCommand.Execute(null);
         Assert.Contains("班", vm.FlavorText);
 
@@ -164,6 +166,7 @@ public sealed class WorkCountdownFlavorTests
         // 节日文案已改为同方向的加班吐槽，仍优先于加班兜底。
         using var vm = new WorkCountdownViewModel(() => new(2026, 10, 3, 9, 30, 0), new EmptyStore(), false);
         vm.StartTimeText = "09:30";
+        vm.OvertimeText = "4";
         vm.StartCommand.Execute(null);
         Assert.True(vm.HasOvertime);
         Assert.Contains("假期第 3 天", vm.FlavorText);

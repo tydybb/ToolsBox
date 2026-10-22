@@ -1,6 +1,9 @@
 using System.Windows;
+using System.IO;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using ToolsBox.App.Views;
 using ToolsBox.App.WorkCountdown;
@@ -57,22 +60,24 @@ public sealed class OffWorkReminderTests
         vm.StartCommand.Execute(null);
         Type? type = typeof(App).Assembly.GetType("ToolsBox.App.Views.OffWorkReminderWindow");
         Assert.NotNull(type);
-        var window = Assert.IsAssignableFrom<Window>(Activator.CreateInstance(type!, vm));
+        var constructor = type!.GetConstructor([typeof(WorkCountdownViewModel), typeof(bool)]);
+        Assert.NotNull(constructor);
+        var window = Assert.IsAssignableFrom<Window>(constructor!.Invoke([vm, false]));
         bool closed = false;
         window.Closed += (_, _) => closed = true;
         try
         {
-            window.Measure(new Size(520, 320));
-            window.Arrange(new Rect(0, 0, 520, 320));
+            window.Measure(new Size(700, 420));
+            window.Arrange(new Rect(0, 0, 700, 420));
             window.UpdateLayout();
             var content = Assert.IsAssignableFrom<FrameworkElement>(window.Content);
-            content.Measure(new Size(520, 320));
-            content.Arrange(new Rect(0, 0, 520, 320));
+            content.Measure(new Size(700, 380));
+            content.Arrange(new Rect(0, 0, 700, 380));
             content.UpdateLayout();
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             Assert.Equal("即将关机", window.Title);
             var background = Assert.IsType<SolidColorBrush>(window.Background);
-            Assert.Equal(Color.FromRgb(0, 120, 215), background.Color);
+            Assert.Equal(Color.FromRgb(245, 247, 251), background.Color);
             Assert.True(window.Topmost);
             Assert.False(window.ShowActivated);
             Assert.Null(window.FindName("ReminderDisclaimer"));
@@ -87,19 +92,119 @@ public sealed class OffWorkReminderTests
             Assert.Equal("关闭", dismissButton.Content);
             Assert.Equal(Visibility.Visible, dismissButton.Visibility);
             Assert.True(dismissButton.IsEnabled);
-            Assert.Equal(110, dismissButton.ActualWidth);
-            Assert.Equal(36, dismissButton.ActualHeight);
-            Assert.InRange(dismissButton.TransformToAncestor(content).Transform(new Point(0, 0)).Y + dismissButton.ActualHeight, 0, 320);
+            Assert.Equal(120, dismissButton.ActualWidth);
+            Assert.Equal(42, dismissButton.ActualHeight);
+            Assert.InRange(dismissButton.TransformToAncestor(content).Transform(new Point(0, 0)).Y + dismissButton.ActualHeight, 0, content.ActualHeight);
             now = now.AddMinutes(1);
             vm.Refresh();
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             Assert.Equal("00:06:00", timer.Text);
-            WpfTestSnapshot.SaveWindowContent(window, 520, 320, "off-work-reminder.png");
+            WpfTestSnapshot.SaveWindowContent(window, 700, 420, "off-work-reminder.png");
             dismissButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.True(closed);
             now = now.AddMinutes(1);
             vm.Refresh();
             Assert.Equal("00:07:00", vm.ElapsedText);
+        }
+        finally { window.Close(); }
+    });
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task ReminderWindow_AppliesCurrentThemeAndUpdatesExistingContent(bool dark) => WpfTestThread.RunAsync(async () =>
+    {
+        using var vm = new WorkCountdownViewModel(() => new(2026, 11, 11, 18, 35, 0), new EmptyStore(), false);
+        vm.StartTimeText = "0930";
+        vm.StartCommand.Execute(null);
+        var constructor = typeof(OffWorkReminderWindow).GetConstructor([typeof(WorkCountdownViewModel), typeof(bool)]);
+        Assert.NotNull(constructor);
+        var window = Assert.IsType<OffWorkReminderWindow>(constructor!.Invoke([vm, dark]));
+        try
+        {
+            var content = Assert.IsType<Grid>(window.Content);
+            content.Measure(new Size(700, 380));
+            content.Arrange(new Rect(0, 0, 700, 380));
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            content.UpdateLayout();
+            var artwork = Assert.IsType<Image>(window.FindName("ReminderArtworkImage"));
+            ImageSource source = Assert.IsAssignableFrom<ImageSource>(artwork.Source);
+            Assert.Equal(220, artwork.ActualWidth);
+            Assert.Equal(220, artwork.ActualHeight);
+            string key = Assert.IsType<string>(typeof(OffWorkReminderWindow).GetProperty("SelectedArtworkKey")?.GetValue(window));
+            Assert.False(typeof(OffWorkReminderWindow).GetProperty("SelectedArtworkKey")!.CanWrite);
+            Assert.Contains(key, new[] { "ride", "rest", "drool", "run", "beagle" });
+            AssertTheme(window, dark);
+
+            var apply = typeof(OffWorkReminderWindow).GetMethod("ApplyTheme", [typeof(bool)]);
+            Assert.NotNull(apply);
+            apply!.Invoke(window, [!dark]);
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            content.UpdateLayout();
+            AssertTheme(window, !dark);
+            Assert.Same(source, artwork.Source);
+            Assert.Equal(key, typeof(OffWorkReminderWindow).GetProperty("SelectedArtworkKey")!.GetValue(window));
+            Assert.Null(window.Owner);
+            Assert.False(window.ShowActivated);
+            Assert.False(window.ShowInTaskbar);
+            Assert.True(window.Topmost);
+        }
+        finally { window.Close(); }
+    });
+
+    [Theory]
+    [InlineData(false, 96)]
+    [InlineData(true, 96)]
+    [InlineData(false, 144)]
+    [InlineData(true, 144)]
+    public Task ReminderWindow_ArtworkTextAndRoundedButtonsFitAtStandardAndHighDpi(bool dark, int dpi) => WpfTestThread.RunAsync(async () =>
+    {
+        using var vm = new WorkCountdownViewModel(() => new(2026, 9, 18, 18, 35, 0), new EmptyStore(), false);
+        vm.StartTimeText = "0930";
+        vm.StartCommand.Execute(null);
+        var constructor = typeof(OffWorkReminderWindow).GetConstructor([typeof(WorkCountdownViewModel), typeof(bool)]);
+        Assert.NotNull(constructor);
+        var window = Assert.IsType<OffWorkReminderWindow>(constructor!.Invoke([vm, dark]));
+        try
+        {
+            Assert.Equal(700, window.Width);
+            Assert.Equal(420, window.Height);
+            var content = Assert.IsType<Grid>(window.Content);
+            content.Measure(new Size(700, 380));
+            content.Arrange(new Rect(0, 0, 700, 380));
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            content.UpdateLayout();
+            var viewport = new Rect(content.RenderSize);
+            foreach (string name in new[] { "WarningTitle", "ReminderMessage", "FlavorText", "OverdueNotice", "OverdueTimer", "ReminderArtworkImage", "FinishWorkButton", "DismissButton" })
+            {
+                var element = Assert.IsAssignableFrom<FrameworkElement>(window.FindName(name));
+                Assert.Equal(Visibility.Visible, element.Visibility);
+                Assert.True(element.ActualWidth > 0 && element.ActualHeight > 0, name);
+                Rect bounds = element.TransformToAncestor(content).TransformBounds(new Rect(element.RenderSize));
+                Assert.True(viewport.Contains(bounds), $"{name} {bounds} 超出提醒窗内容 {viewport}");
+            }
+            foreach (string name in new[] { "FinishWorkButton", "DismissButton" })
+            {
+                var button = Assert.IsType<Button>(window.FindName(name));
+                button.ApplyTemplate();
+                var border = Assert.IsType<Border>(button.Template.FindName("ButtonBorder", button));
+                Assert.Equal(new CornerRadius(8), border.CornerRadius);
+                Assert.True(button.IsEnabled);
+                Assert.NotNull(button.Foreground);
+            }
+            var canvas = Assert.IsType<Canvas>(window.FindName("CelebrationCanvas"));
+            Assert.False(canvas.IsHitTestVisible);
+            double scale = dpi / 96d;
+            var bitmap = new RenderTargetBitmap((int)Math.Ceiling(content.ActualWidth * scale),
+                (int)Math.Ceiling(content.ActualHeight * scale), dpi, dpi, PixelFormats.Pbgra32);
+            bitmap.Render(content);
+            Assert.Equal((int)Math.Ceiling(content.ActualWidth * scale), bitmap.PixelWidth);
+            Assert.Equal((int)Math.Ceiling(content.ActualHeight * scale), bitmap.PixelHeight);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using var snapshot = File.Create(Path.Combine(AppContext.BaseDirectory,
+                $"off-work-reminder-{(dark ? "dark" : "light")}-{dpi}.png"));
+            encoder.Save(snapshot);
         }
         finally { window.Close(); }
     });
@@ -217,6 +322,48 @@ public sealed class OffWorkReminderTests
 
         using var ordinary = new WorkCountdownViewModel(() => new DateTime(2026, 11, 11, 18, 35, 0), new EmptyStore(), false);
         Assert.Equal(CelebrationLevel.None, ordinary.CelebrationLevel);   // 普通日子不放
+    }
+
+    private static void AssertTheme(OffWorkReminderWindow window, bool dark)
+    {
+        static Color ColorOf(Brush brush) => Assert.IsType<SolidColorBrush>(brush).Color;
+        Assert.Equal(dark ? Color.FromRgb(20, 24, 32) : Color.FromRgb(245, 247, 251), ColorOf(window.Background));
+        Assert.Equal(dark ? Color.FromRgb(236, 240, 246) : Color.FromRgb(24, 37, 54), ColorOf(window.Foreground));
+        Assert.Equal(ColorOf(window.Foreground), ColorOf(Assert.IsType<TextBlock>(window.FindName("WarningTitle")).Foreground));
+        Assert.Equal(ColorOf((Brush)window.Resources["ToolboxSuccessTextBrush"]), ColorOf(Assert.IsType<TextBlock>(window.FindName("OverdueTimer")).Foreground));
+        var artwork = Assert.IsType<Image>(window.FindName("ReminderArtworkImage"));
+        if (dark)
+        {
+            var glow = Assert.IsType<DropShadowEffect>(artwork.Effect);
+            Assert.Equal(0, glow.ShadowDepth);
+            Assert.InRange(glow.Opacity, 0.05, 0.25);
+        }
+        else Assert.Null(artwork.Effect);
+        foreach (string name in new[] { "WarningTitle", "ReminderMessage", "FlavorText", "OverdueNotice", "OverdueTimer" })
+        {
+            var text = Assert.IsType<TextBlock>(window.FindName(name));
+            Color background = ColorOf(window.Background);
+            for (DependencyObject? current = text; current is not null; current = VisualTreeHelper.GetParent(current))
+            {
+                if (current is Border { Background: SolidColorBrush brush } && brush.Color.A == 255)
+                { background = brush.Color; break; }
+            }
+            double foregroundLuminance = Luminance(ColorOf(text.Foreground));
+            double backgroundLuminance = Luminance(background);
+            double ratio = (Math.Max(foregroundLuminance, backgroundLuminance) + 0.05)
+                / (Math.Min(foregroundLuminance, backgroundLuminance) + 0.05);
+            Assert.True(ratio >= 3, $"{name} 文字对比度 {ratio:0.00}");
+        }
+    }
+
+    private static double Luminance(Color color)
+    {
+        static double Linear(byte value)
+        {
+            double channel = value / 255d;
+            return channel <= 0.04045 ? channel / 12.92 : Math.Pow((channel + 0.055) / 1.055, 2.4);
+        }
+        return 0.2126 * Linear(color.R) + 0.7152 * Linear(color.G) + 0.0722 * Linear(color.B);
     }
 
     private sealed class EmptyStore : ICountdownStateStore

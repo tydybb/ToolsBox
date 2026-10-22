@@ -47,7 +47,9 @@ public sealed class FinishWorkIntegrationTests
             Assert.True(Read<bool>(vm, "IsFinished"));
             Assert.Equal(early, Read<bool>(vm, "IsEarlyDeparture"));
             Assert.False(button.IsEnabled);
-            Assert.Equal(Color.FromRgb(99, 115, 129), Assert.IsType<SolidColorBrush>(button.Foreground).Color);
+            Assert.Equal(0.45, button.Opacity);
+            Assert.Equal(Assert.IsType<SolidColorBrush>(window.FindResource("ToolboxSuccessTextBrush")).Color,
+                Assert.IsType<SolidColorBrush>(button.Foreground).Color);
             if (early) Assert.Contains("早退", vm.AttendanceText);
             Assert.Single(notices);
             Assert.Equal(0, deadlineNotices);
@@ -62,7 +64,7 @@ public sealed class FinishWorkIntegrationTests
             Assert.Equal(incomplete, details.Text.Contains("计划加班未完成"));
             Assert.Contains("计时已停止", Assert.IsType<TextBlock>(view.FindName("FinishedTimerCaption")).Text);
             Assert.Equal(Visibility.Collapsed, Assert.IsType<TextBlock>(view.FindName("OverdueNotice")).Visibility);
-            Assert.Equal(Visibility.Collapsed, Assert.IsType<TextBlock>(view.FindName("OvertimeMessage")).Visibility);
+            Assert.Null(view.FindName("OvertimeMessage"));
             var clock = Assert.IsType<TextBlock>(view.FindName("CountdownText"));
             Assert.Equal(frozen, clock.Text);
             var snapshotWindow = new Window { Content = view, Background = view.Background };

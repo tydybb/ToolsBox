@@ -17,7 +17,7 @@ public sealed class WorkCountdownViewTests
         Assert.NotNull(type);
         var view = Assert.IsAssignableFrom<UserControl>(Activator.CreateInstance(type!));
         using var vm = new WorkCountdownViewModel(() => new(2026, 9, 18, 9, 30, 0), new EmptyStore(), false);
-        var shell = new MainWindow(vm, _ => { });
+        var shell = new MainWindow(vm, _ => { }, _ => { });
         try
         {
             view.Resources = shell.Resources;
@@ -31,9 +31,12 @@ public sealed class WorkCountdownViewTests
             var countdown = Assert.IsType<TextBlock>(view.FindName("CountdownText"));
             var overtimePanel = Assert.IsType<StackPanel>(view.FindName("OvertimePanel"));
             var overtimeDuration = Assert.IsType<TextBlock>(view.FindName("OvertimeDuration"));
-            var overtimePeriod = Assert.IsType<TextBlock>(view.FindName("OvertimePeriod"));
-            var overtimeMessage = Assert.IsType<TextBlock>(view.FindName("OvertimeMessage"));
+            var flavor = Assert.IsType<TextBlock>(view.FindName("FlavorText"));
+            var attendance = Assert.IsType<TextBlock>(view.FindName("AttendanceText"));
+            Assert.Null(view.FindName("OvertimePeriod"));
+            Assert.Null(view.FindName("OvertimeMessage"));
             Assert.Equal(Visibility.Collapsed, overtimePanel.Visibility);
+            Assert.Equal(Visibility.Collapsed, attendance.Visibility);
             time.Text = timeInput;
             hours.Text = "2";
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
@@ -46,32 +49,57 @@ public sealed class WorkCountdownViewTests
             Assert.Equal("11:30:00", countdown.Text);
             Assert.Equal(Visibility.Visible, overtimePanel.Visibility);
             Assert.Equal("计划加班：2 小时（不含休息）", overtimeDuration.Text);
-            Assert.Equal("加班时段：2026-09-18 18:30 — 2026-09-18 21:00", overtimePeriod.Text);
-            Assert.Contains("加班小副本", overtimeMessage.Text);
+            Assert.Equal("正常出勤", attendance.Text);
+            Assert.Equal(Visibility.Visible, attendance.Visibility);
+            Assert.Equal(vm.Card.Headline, flavor.Text);
+            var card = Assert.IsType<Border>(view.FindName("CountdownCard"));
+            view.UpdateLayout();
+            Assert.True(countdown.TranslatePoint(new Point(), card).Y + countdown.ActualHeight <=
+                attendance.TranslatePoint(new Point(), card).Y,
+                "Attendance must be below the timer, as in the reference screenshot.");
+            Assert.True(attendance.TranslatePoint(new Point(), card).Y + attendance.ActualHeight <=
+                overtimeDuration.TranslatePoint(new Point(), card).Y,
+                "Planned overtime must be below attendance.");
             Assert.Equal(vm.DayMode, Assert.IsType<ComboBox>(view.FindName("DayModeInput")).SelectedValue);
             var screenshot = new System.Windows.Media.Imaging.RenderTargetBitmap(760, 900, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
             screenshot.Render(view);
             var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
             encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(screenshot));
-            using var imageFile = System.IO.File.Create(System.IO.Path.Combine(AppContext.BaseDirectory, "countdown-view.png"));
-            encoder.Save(imageFile);
+            using (var imageFile = System.IO.File.Create(System.IO.Path.Combine(AppContext.BaseDirectory, "countdown-view.png")))
+                encoder.Save(imageFile);
             hours.Text = "15";
+            string appliedFlavor = flavor.Text;
+            string appliedAttendance = attendance.Text;
+            string appliedTimer = countdown.Text;
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
-            Assert.Contains("加班小副本", overtimeMessage.Text);
+            Assert.Equal("计划加班：2 小时（不含休息）", overtimeDuration.Text);
+            Assert.Equal(appliedFlavor, flavor.Text);
+            Assert.Equal(appliedAttendance, attendance.Text);
+            Assert.Equal(appliedTimer, countdown.Text);
             start.Command.Execute(null);
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
-            Assert.Contains("别吹牛逼", overtimeMessage.Text);
-            hours.Text = "0";
+            Assert.Equal("计划加班：15 小时（不含休息）", overtimeDuration.Text);
+            Assert.Equal(vm.Card.Headline, flavor.Text);
+            Assert.Equal(vm.Card.Caption,
+                Assert.IsType<TextBlock>(view.FindName("CountdownCharacterCaption")).Text);
+            hours.Text = "";
             start.Command.Execute(null);
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             Assert.Equal(Visibility.Collapsed, overtimePanel.Visibility);
+            Assert.Equal(Visibility.Visible, attendance.Visibility);
             hours.Text = "2";
             start.Command.Execute(null);
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             Assert.Equal(Visibility.Visible, overtimePanel.Visibility);
+            vm.FinishCommand.Execute(null);
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            Assert.True(vm.IsFinished);
+            Assert.Equal("", hours.Text);
+            Assert.Equal("计划加班：2 小时（不含休息）", overtimeDuration.Text);
             vm.ResetCommand.Execute(null);
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             Assert.Equal(Visibility.Collapsed, overtimePanel.Visibility);
+            Assert.Equal(Visibility.Collapsed, attendance.Visibility);
         }
         finally { shell.Close(); }
     });

@@ -122,7 +122,7 @@ public sealed class HolidayFunCopyTests
         Assert.Contains("余额还剩 4 天", HolidayFunCopy.OffWork(during));
 
         var makeup = new HolidayMoment(HolidayMomentKind.MakeupWorkday, "", 0, 0, "");
-        Assert.Equal("补班日准点收工，这班补得值！", HolidayFunCopy.OffWork(makeup));
+        Assert.Equal("调休补班收工，把今晚留给生活", HolidayFunCopy.OffWork(makeup));
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public sealed class HolidayFunCopyTests
         var moment = HolidayFunCopy.Detect(new DateOnly(2026, 9, 20));
         Assert.Equal(HolidayMomentKind.MakeupWorkday, moment.Kind);
         Assert.Equal(5, moment.Days);
-        Assert.Equal("补班日准点收工，距离中秋节假期还有 4 天，赚了！", HolidayFunCopy.OffWork(moment));
+        Assert.Equal("调休补班收工，距离中秋节假期还有 4 天", HolidayFunCopy.OffWork(moment));
     }
 
     [Fact]

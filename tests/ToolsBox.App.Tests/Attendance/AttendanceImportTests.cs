@@ -28,7 +28,7 @@ public class AttendanceImportTests
     {
         DateTime now=new(2026,9,26,9,0,0);
         using var vm=new WorkCountdownViewModel(()=>now,new Memory(),false);
-        Assert.Equal("4",vm.OvertimeText);
+        Assert.Equal("",vm.OvertimeText);
         Assert.True(vm.ImportClockIn(now.AddMinutes(-20),()=>true,CountdownDayMode.Workday));
         Assert.Equal("0",vm.OvertimeText);Assert.NotNull(vm.Schedule!.NormalEnd);
         Assert.Equal(new DateTime(2026,9,26,17,40,0),vm.Schedule.End);

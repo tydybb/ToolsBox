@@ -4,6 +4,9 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
+using System.Reflection;
+using ToolsBox.App.Lottery;
+using ToolsBox.Core.Lottery;
 
 namespace ToolsBox.App.Tests.Startup;
 
@@ -27,6 +30,12 @@ public sealed class WindowStartupAndNavigationTests
             {
                 IntPtr handle = new WindowInteropHelper(window).EnsureHandle();
                 var vm = Assert.IsType<MainViewModel>(window.DataContext);
+                // Accessing all pages must not load the current user's real lottery ledger.
+                var isolatedLottery = new Lazy<LotteryViewModel>(() => new(
+                    new LotteryStore(Path.Combine(Path.GetTempPath(), "ToolsBox-navigation-" + Guid.NewGuid().ToString("N"), "lottery.json")),
+                    new OfflineLotteryClient(), _ => false, requestFavoriteName: _ => null));
+                typeof(MainViewModel).GetField("_lottery", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .SetValue(vm, isolatedLottery);
                 var ports = Assert.IsAssignableFrom<ToggleButton>(window.FindName("PortNavigation"));
                 var files = Assert.IsAssignableFrom<ToggleButton>(window.FindName("FileNavigation"));
                 var fileLabel = Assert.IsType<System.Windows.Controls.StackPanel>(files.Content)
@@ -37,13 +46,16 @@ public sealed class WindowStartupAndNavigationTests
                 Assert.Null(vm.GetType().GetProperty("ArchiveRecovery"));
                 var countdown = Assert.IsAssignableFrom<ToggleButton>(window.FindName("CountdownNavigation"));
                 var web = Assert.IsAssignableFrom<ToggleButton>(window.FindName("WebResourcesNavigation"));
+                var lottery = Assert.IsAssignableFrom<ToggleButton>(window.FindName("LotteryNavigation"));
+                Assert.Same(ports.Style, lottery.Style);
                 Assert.Same(ports.Style, web.Style);
                 Assert.Matches(@"^v\d+\.\d+\.\d+",
                     Assert.IsAssignableFrom<System.Windows.Controls.TextBlock>(window.FindName("VersionLabel")).Text);
-                ToggleButton[] buttons = [ports, files, network, countdown, web];
+                ToggleButton[] buttons = [ports, files, network, countdown, web, lottery];
                 object[] pages = [vm.PortMonitor, vm.FileUnlocker, vm.NetworkTraffic,
                     vm.GetType().GetProperty("WorkCountdown")!.GetValue(vm)!,
-                    vm.GetType().GetProperty("WebResources")!.GetValue(vm)!];
+                    vm.GetType().GetProperty("WebResources")!.GetValue(vm)!,
+                    vm.GetType().GetProperty("Lottery")!.GetValue(vm)!];
                 await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
                 foreach (int index in new[] { 0, 2, 1, 3, 4, 0, 4, 3 })
                 {
@@ -55,8 +67,11 @@ public sealed class WindowStartupAndNavigationTests
                     for (int i = 0; i < buttons.Length; i++)
                     {
                         Assert.Equal(i == index, buttons[i].IsChecked);
-                        Assert.Equal(i == index ? "#FF246BFD" : "#FF263442",
-                            Assert.IsType<SolidColorBrush>(buttons[i].Background).Color.ToString());
+                        var selectedBackground = Assert.IsType<SolidColorBrush>(window.FindResource("ToolboxSurfaceBrush"));
+                        var text = Assert.IsType<SolidColorBrush>(window.FindResource(i == index ? "ToolboxAccentBrush" : "ToolboxMutedBrush"));
+                        Assert.Equal(i == index ? selectedBackground.Color : Colors.Transparent,
+                            Assert.IsType<SolidColorBrush>(buttons[i].Background).Color);
+                        Assert.Equal(text.Color, Assert.IsType<SolidColorBrush>(buttons[i].Foreground).Color);
                     }
                 }
                 WpfTestSnapshot.SaveWindowContent(window, 1280, 760, "main-navigation-unified.png");
@@ -91,5 +106,11 @@ public sealed class WindowStartupAndNavigationTests
         public ToolsBox.App.WorkCountdown.CountdownState? Load() => null;
         public void Save(ToolsBox.App.WorkCountdown.CountdownState state) { }
         public void Clear() { }
+    }
+
+    private sealed class OfflineLotteryClient : ILotteryClient
+    {
+        public Task<IReadOnlyList<LotteryDraw>> FetchAsync(bool allHistory, IProgress<string>? progress, CancellationToken token) =>
+            Task.FromResult<IReadOnlyList<LotteryDraw>>([]);
     }
 }
