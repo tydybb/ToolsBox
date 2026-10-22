@@ -32,6 +32,9 @@ jobs:
       - name: Verify release packaging with synthetic files
         shell: pwsh
         run: ./scripts/Test-ReleasePackaging.ps1
+      - name: Verify release publishing with simulated HTTP responses
+        shell: pwsh
+        run: ./scripts/Test-GitHubRelease.ps1
       - name: Run safe test projects
         shell: pwsh
         run: ./scripts/Test-CI.ps1
