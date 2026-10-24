@@ -8,11 +8,14 @@ namespace ToolsBox.App.Tests.Startup;
 public sealed class OneClickPublishTests
 {
     [Theory]
-    [InlineData("Publish-SelfContained.cmd", "self-contained-win-x64", "true")]
-    [InlineData("Publish-FrameworkDependent.cmd", "framework-dependent-win-x64", "false")]
-    public async Task EntryPoint_PublishesExpectedModeFromAnotherDirectory(string entryPoint, string modeDirectory, string selfContained)
+    [InlineData("Publish-SelfContained.cmd", "self-contained-win-x64", "true", true)]
+    [InlineData("Publish-SelfContained.cmd", "self-contained-win-x64", "true", false)]
+    [InlineData("Publish-FrameworkDependent.cmd", "framework-dependent-win-x64", "false", true)]
+    [InlineData("Publish-FrameworkDependent.cmd", "framework-dependent-win-x64", "false", false)]
+    public async Task EntryPoint_PublishesExpectedModeFromAnotherDirectory(string entryPoint, string modeDirectory, string selfContained,
+        bool includePrivateArtwork)
     {
-        using var fixture = new PublishFixture();
+        using var fixture = new PublishFixture(includePrivateArtwork: includePrivateArtwork);
         RunResult result = await fixture.RunAsync(entryPoint);
 
         Assert.True(result.ExitCode == 0, result.Output);
@@ -29,14 +32,33 @@ public sealed class OneClickPublishTests
         AssertOption(args, "--self-contained", selfContained);
         Assert.True(args.Contains("-p:PublishProfile=PortableWinX64"), string.Join(" | ", args));
         Assert.Contains($"-p:EnableCompressionInSingleFile={selfContained}", args);
+        Assert.Contains($"-p:IncludePrivateArtwork={includePrivateArtwork.ToString().ToLowerInvariant()}", args);
         Assert.DoesNotContain("--no-restore", args);
         string outputDirectory = GetOption(args, "--output");
+        if (includePrivateArtwork) modeDirectory += "-private-artwork";
         Assert.Equal(Path.Combine(fixture.Repository, "bin", "publish", modeDirectory), Path.GetDirectoryName(outputDirectory));
         Assert.True(new FileInfo(Path.Combine(outputDirectory, "宝哥工具箱.exe")).Length > 0);
         Assert.Contains(outputDirectory, result.Output);
         Assert.Contains("MiB", result.Output);
         Assert.Contains("STUB PUBLISH OUTPUT", result.Output);
+        Assert.Equal(includePrivateArtwork, result.Output.Contains("本地自用", StringComparison.Ordinal));
         Assert.DoesNotContain("按 Enter", result.Output);
+    }
+
+    [Fact]
+    public async Task PortableScript_DefaultsToPublicArtworkAndSeparateOutputDirectory()
+    {
+        using var fixture = new PublishFixture();
+        RunResult result = await fixture.RunAsync(Path.Combine("scripts", "Publish-Portable.ps1"),
+            extraArguments: "-Mode FrameworkDependent");
+
+        Assert.True(result.ExitCode == 0, result.Output);
+        string[] args = fixture.ReadInvocations().Last().Arguments;
+        Assert.Contains("-p:IncludePrivateArtwork=false", args);
+        string outputDirectory = GetOption(args, "--output");
+        Assert.Equal(Path.Combine(fixture.Repository, "bin", "publish", "framework-dependent-win-x64"),
+            Path.GetDirectoryName(outputDirectory));
+        Assert.DoesNotContain("本地自用", result.Output);
     }
 
     [Theory]
@@ -207,7 +229,7 @@ public sealed class OneClickPublishTests
         public string Repository { get; }
         public string ReleasePath => Path.Combine(fixtureRoot, "release");
 
-        public PublishFixture(string behavior = "success")
+        public PublishFixture(string behavior = "success", bool includePrivateArtwork = false)
         {
             this.behavior = behavior;
             string sourceRoot = FindRepositoryRoot();
@@ -230,6 +252,12 @@ public sealed class OneClickPublishTests
             string projectDirectory = Path.Combine(Repository, "src", "ToolsBox.App");
             Directory.CreateDirectory(projectDirectory);
             File.WriteAllText(Path.Combine(projectDirectory, "ToolsBox.App.csproj"), "<Project />");
+            if (includePrivateArtwork)
+            {
+                string artworkDirectory = Path.Combine(projectDirectory, "Assets", "Countdown");
+                Directory.CreateDirectory(artworkDirectory);
+                File.WriteAllBytes(Path.Combine(artworkDirectory, "lipu.png"), [77, 90, 1, 2]);
+            }
             if (behavior != "no-dotnet")
             {
                 File.WriteAllText(Path.Combine(stubDirectory, "dotnet.cmd"), "@echo off\r\n\"%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\" -NoLogo -NoProfile -ExecutionPolicy Bypass -File \"%~dp0dotnet-stub.ps1\" %*\r\nexit /b %ERRORLEVEL%\r\n", Encoding.ASCII);
@@ -240,9 +268,13 @@ public sealed class OneClickPublishTests
         public Process Start(string entryPoint, bool noPause = true, string extraArguments = "")
         {
             string systemDirectory = Environment.GetFolderPath(Environment.SpecialFolder.System);
-            var info = new ProcessStartInfo(Path.Combine(systemDirectory, "cmd.exe"))
+            bool portableScript = Path.GetExtension(entryPoint) == ".ps1";
+            var info = new ProcessStartInfo(Path.Combine(systemDirectory,
+                portableScript ? @"WindowsPowerShell\v1.0\powershell.exe" : "cmd.exe"))
             {
-                Arguments = $"/d /s /c \"\"{Path.Combine(Repository, entryPoint)}\" {(noPause ? "-NoPause" : "")} {extraArguments}\"",
+                Arguments = portableScript
+                    ? $"-NoLogo -NoProfile -ExecutionPolicy Bypass -File \"{Path.Combine(Repository, entryPoint)}\" {(noPause ? "-NoPause" : "")} {extraArguments}"
+                    : $"/d /s /c \"\"{Path.Combine(Repository, entryPoint)}\" {(noPause ? "-NoPause" : "")} {extraArguments}\"",
                 WorkingDirectory = Path.Combine(fixtureRoot, "other cwd"),
                 UseShellExecute = false,
                 CreateNoWindow = true,

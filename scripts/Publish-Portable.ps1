@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('SelfContained', 'FrameworkDependent')]
     [string]$Mode,
+    [switch]$IncludePrivateArtwork,
     [switch]$NoPause
 )
 
@@ -53,6 +54,12 @@ try {
         $selfContained = 'true'
         $modeDirectory = 'self-contained-win-x64'
     }
+    $privateArtwork = 'false'
+    if ($IncludePrivateArtwork) {
+        $privateArtwork = 'true'
+        $modeDirectory += '-private-artwork'
+        Write-Host '构建用途：本地自用（包含原角色素材）。'
+    }
     $uniqueDirectory = '{0}-{1}' -f (Get-Date -Format 'yyyyMMdd-HHmmss-fff'), ([Guid]::NewGuid().ToString('N'))
     $outputDirectory = Join-Path (Join-Path $publishRoot $modeDirectory) $uniqueDirectory
     [System.IO.Directory]::CreateDirectory($outputDirectory) | Out-Null
@@ -64,6 +71,7 @@ try {
         '--runtime', 'win-x64',
         '--self-contained', $selfContained,
         '-p:PublishProfile=PortableWinX64',
+        "-p:IncludePrivateArtwork=$privateArtwork",
         "-p:EnableCompressionInSingleFile=$selfContained",
         '--output', $outputDirectory
     )

@@ -30,12 +30,31 @@ internal static class CountdownSpriteCatalog
         {
             if (!Atlases.TryGetValue(atlasKey, out IReadOnlyList<BitmapSource>[]? atlas))
             {
+#if TOOLSBOX_PRIVATE_ARTWORK
+                atlas = LoadPrivateResource(atlasKey);
+                if (atlas.Length != Rows) atlas = CreateOriginalAtlas(character, walking);
+#else
                 atlas = CreateOriginalAtlas(character, walking);
+#endif
                 Atlases.Add(atlasKey, atlas);
             }
             return atlas.Length == Rows ? atlas[row] : [];
         }
     }
+
+#if TOOLSBOX_PRIVATE_ARTWORK
+    private static IReadOnlyList<BitmapSource>[] LoadPrivateResource(string atlasKey)
+    {
+        try
+        {
+            string assembly = typeof(CountdownSpriteCatalog).Assembly.GetName().Name!;
+            var resource = Application.GetResourceStream(new Uri(
+                $"/{assembly};component/Assets/Countdown/{atlasKey}.png", UriKind.Relative));
+            return resource is null ? [] : DecodeAlignedAtlas(resource.Stream);
+        }
+        catch (Exception exception) when (IsResourceFailure(exception)) { return []; }
+    }
+#endif
 
     private static IReadOnlyList<BitmapSource>[] CreateOriginalAtlas(string character, bool walking)
     {

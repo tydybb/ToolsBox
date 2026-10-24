@@ -42,6 +42,10 @@ foreach ($mode in $modes) {
     if (-not (Test-Path -LiteralPath $executable -PathType Leaf) -or (Get-Item -LiteralPath $executable).Length -eq 0) {
         throw "Missing or empty $($mode.Name) portable executable."
     }
+    $productVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($executable).ProductVersion
+    if ($productVersion -like '*-private*') {
+        throw "The $($mode.Name) private artwork executable cannot be packaged as public Release assets (ProductVersion: $productVersion)."
+    }
     $files = @(Get-ChildItem -LiteralPath $mode.Directory -File -Recurse -Force)
     if ($files.Count -ne 1) { throw "The $($mode.Name) publish contains sidecar files; a standalone EXE is required." }
 }

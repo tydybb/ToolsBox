@@ -86,6 +86,43 @@ try {
     catch { $failed = $_.Exception.Message -like '*already exists*' }
     if (-not $failed) { throw 'Packaging must refuse to overwrite an existing release directory.' }
 
+    $compiler = @('Framework64', 'Framework') | ForEach-Object {
+        Join-Path $env:WINDIR "Microsoft.NET/$_/v4.0.30319/csc.exe"
+    } | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+    if (-not $compiler) { throw 'The private PE fixture requires the Windows .NET Framework C# compiler.' }
+    foreach ($privateVersion in @("$version-private", "$version-private+fixture")) {
+        $typeName = 'PrivateArtworkFixture' + [Guid]::NewGuid().ToString('N')
+        $privateExecutable = Join-Path $fixtureRoot "$typeName.exe"
+        $source = Join-Path $fixtureRoot "$typeName.cs"
+        [IO.File]::WriteAllText($source, @"
+using System.Reflection;
+[assembly: AssemblyInformationalVersion("$privateVersion")]
+public sealed class $typeName { }
+"@)
+        & $compiler /nologo /target:library "/out:$privateExecutable" $source
+        if ($LASTEXITCODE -ne 0) { throw 'Could not compile the private PE fixture.' }
+        $actualVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($privateExecutable).ProductVersion
+        if ($actualVersion -ne $privateVersion) { throw 'The private fixture must carry a real PE ProductVersion.' }
+        foreach ($privateMode in @('self-contained', 'framework-dependent')) {
+            $directory = if ($privateMode -eq 'self-contained') { $selfContained } else { $frameworkDependent }
+            $executable = Join-Path $directory '宝哥工具箱.exe'
+            $originalBytes = [IO.File]::ReadAllBytes($executable)
+            $privateOutput = Join-Path $fixtureRoot ("private-$privateMode-" + [Guid]::NewGuid().ToString('N'))
+            try {
+                Copy-Item -LiteralPath $privateExecutable -Destination $executable
+                $failed = $false
+                try {
+                    & $packageScript -Version $version -RepositoryRoot $repository -SelfContainedDirectory $selfContained `
+                        -FrameworkDependentDirectory $frameworkDependent -OutputDirectory $privateOutput
+                }
+                catch { $failed = $_.Exception.Message -like '*private*' -and $_.Exception.Message -like '*public*' }
+                if (-not $failed) { throw 'Packaging must reject private artwork executables as public Release assets.' }
+                if (Test-Path -LiteralPath $privateOutput) { throw 'A rejected private executable must not create the release output directory.' }
+            }
+            finally { [IO.File]::WriteAllBytes($executable, $originalBytes) }
+        }
+    }
+
     [IO.File]::Delete((Join-Path $repository 'NOTICE.md'))
     $failed = $false
     try {
@@ -95,7 +132,7 @@ try {
     catch { $failed = $_.Exception.Message -like '*NOTICE.md*' }
     if (-not $failed) { throw 'Packaging must reject a missing NOTICE.md.' }
 
-    Write-Host 'Release packaging fixture passed: asset set, ZIP entries, checksums, overwrite rejection, and missing NOTICE.md.'
+    Write-Host 'Release packaging fixture passed: asset set, ZIP entries, checksums, overwrite rejection, private artwork rejection, and missing NOTICE.md.'
 }
 finally {
     $resolved = [IO.Path]::GetFullPath($fixtureRoot)

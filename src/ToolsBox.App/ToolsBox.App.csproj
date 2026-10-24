@@ -9,7 +9,7 @@
   <ItemGroup>
     <Resource Include="Assets\baoge-toolbox.ico" />
     <Resource Include="Assets\baoge-toolbox-icon.png" />
-    <!-- Legacy character PNGs have no redistribution permission and are not public resources. -->
+    <!-- Legacy character PNGs are opt-in for local personal builds only. -->
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
   </ItemGroup>
 
@@ -40,5 +40,32 @@
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
     <Description>面向 Windows 的端口监控与文件解除占用工具箱</Description>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <IncludePrivateArtwork Condition="'$(IncludePrivateArtwork)' == ''">false</IncludePrivateArtwork>
+    <DefineConstants Condition="'$(IncludePrivateArtwork)' == 'true'">$(DefineConstants);TOOLSBOX_PRIVATE_ARTWORK</DefineConstants>
+    <InformationalVersion Condition="'$(IncludePrivateArtwork)' == 'true'">$(Version)-private</InformationalVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="ToolsBox.PrivateArtwork" Value="$(IncludePrivateArtwork)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(IncludePrivateArtwork)' == 'true'">
+    <!-- Explicit entries make a missing personal asset a build error, never a silent omission. -->
+    <Resource Include="Assets\Countdown\lipu.png" />
+    <Resource Include="Assets\Countdown\lipu-walk.png" />
+    <Resource Include="Assets\Countdown\duodong.png" />
+    <Resource Include="Assets\Countdown\duodong-walk.png" />
+    <Resource Include="Assets\Countdown\xiuzhen.png" />
+    <Resource Include="Assets\Countdown\xiuzhen-walk.png" />
+    <Resource Include="Assets\Countdown\tianzhong.png" />
+    <Resource Include="Assets\Countdown\tianzhong-walk.png" />
+    <Resource Include="Assets\Countdown\xiaohe.png" />
+    <Resource Include="Assets\Countdown\xiaohe-walk.png" />
+    <Resource Include="Assets\Countdown\offwork-ride.png" />
+    <Resource Include="Assets\Countdown\offwork-rest.png" />
+    <Resource Include="Assets\Countdown\offwork-drool.png" />
+    <Resource Include="Assets\Countdown\offwork-run.png" />
+    <Resource Include="Assets\Countdown\offwork-beagle.png" />
+  </ItemGroup>
 
 </Project>
