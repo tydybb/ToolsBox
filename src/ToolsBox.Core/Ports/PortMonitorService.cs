@@ -20,6 +20,7 @@ public sealed class PortMonitorService(IPortSnapshotProvider provider)
         try
         {
             IReadOnlyList<PortEntry> snapshot = await _provider.GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             Snapshot = snapshot;
             LastError = null;
             LastRefreshedAt = DateTimeOffset.Now;

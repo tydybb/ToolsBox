@@ -6,6 +6,21 @@ namespace ToolsBox.Core.Tests.Ports;
 public sealed class PortMonitorServiceTests
 {
     [Fact]
+    public async Task CancelledScanCannotReplaceSnapshotEvenWhenProviderIgnoresCancellation()
+    {
+        var provider = new BlockingProvider();
+        var service = new PortMonitorService(provider);
+        using var cancellation = new CancellationTokenSource();
+        Task<bool> request = service.RefreshAsync(cancellation.Token);
+        await provider.Started.Task;
+        cancellation.Cancel();
+        provider.Complete();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => request);
+        Assert.Empty(service.Snapshot);
+        Assert.Null(service.LastRefreshedAt);
+    }
+
+    [Fact]
     public async Task RefreshAsync_OnSuccess_ReplacesSnapshotAndClearsError()
     {
         PortEntry entry = CreateEntry(8080);
