@@ -6,6 +6,66 @@ namespace ToolsBox.App.Tests.Attendance;
 
 public sealed class AttendanceBridgeTests
 {
+    [Theory]
+    [InlineData("", false)]
+    [InlineData("4", true)]
+    public void WeekendManualResultFillsActualTimeWithoutInventingOvertime(string overtime, bool starts)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "ToolsBox-weekend-import-" + Guid.NewGuid().ToString("N"));
+        DateTime now = new(2026, 10, 24, 9, 0, 0), at = now.AddMinutes(-18);
+        var store = new AttendanceStore(root);
+        try
+        {
+            store.Update(o => o with { Enabled = true });
+            store.SaveSnapshot(new(now, at, "", "synthetic"));
+            using var vm = new WorkCountdownViewModel(() => now, new Memory(), false);
+            vm.OvertimeText = overtime;
+            int confirmations = 0;
+            using var bridge = new AttendanceCountdownBridge(store, vm, _ => { confirmations++; return true; }, false, () => now, () => true);
+
+            bridge.Tick();
+            Assert.Equal("08:42", vm.StartTimeText);
+            Assert.Equal(overtime, vm.OvertimeText);
+            Assert.Equal(starts, vm.Schedule is not null);
+            if (starts)
+            {
+                Assert.Null(vm.Schedule!.NormalEnd);
+                Assert.Equal(at, store.LoadOptions().HandledClockIn);
+            }
+            else
+            {
+                Assert.Contains("4", vm.ErrorMessage);
+                Assert.Null(store.LoadOptions().HandledClockIn);
+            }
+            int first = confirmations;
+            bridge.Tick();
+            Assert.Equal(first, confirmations);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void WeekendPrefillCanBeRecoveredAfterReopeningBeforeSettingAPlan()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "ToolsBox-weekend-reopen-" + Guid.NewGuid().ToString("N"));
+        DateTime now = new(2026, 10, 24, 9, 0, 0), at = now.AddMinutes(-18);
+        var store = new AttendanceStore(root);
+        try
+        {
+            store.Update(o => o with { Enabled = true });
+            store.SaveSnapshot(new(now, at, "", "synthetic"));
+            for (int i = 0; i < 2; i++)
+            {
+                using var vm = new WorkCountdownViewModel(() => now, new Memory(), false);
+                using var bridge = new AttendanceCountdownBridge(store, vm, _ => true, false, () => now, () => true);
+                bridge.Tick();
+                Assert.Equal("08:42", vm.StartTimeText);
+                Assert.Null(vm.Schedule);
+            }
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private sealed class Memory : ICountdownStateStore
     {
         public CountdownState? Value;

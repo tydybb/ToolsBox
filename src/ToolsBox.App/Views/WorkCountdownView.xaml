@@ -183,6 +183,85 @@
                     <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource ToolboxDangerTextBrush}" TextWrapping="Wrap" Margin="0,12,0,0"/>
                 </StackPanel>
             </Border>
+            <Border x:Name="OvertimeHistoryCard" Background="{DynamicResource ToolboxSurfaceBrush}" CornerRadius="12" Padding="20"
+                    BorderBrush="{DynamicResource ToolboxBorderBrush}" BorderThickness="1" Margin="0,20,0,0">
+                <Border.Resources>
+                    <BooleanToVisibilityConverter x:Key="OvertimeHistoryVisibilityConverter"/>
+                </Border.Resources>
+                <StackPanel>
+                    <TextBlock Text="加班记录" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,14"/>
+                    <WrapPanel Margin="0,0,0,4">
+                        <Button x:Name="PreviousOvertimeMonthButton" Content="上个月" Command="{Binding PreviousOvertimeMonthCommand}"
+                                Margin="0,0,8,8" AutomationProperties.Name="查看上个月的加班记录"/>
+                        <TextBlock x:Name="OvertimeHistoryMonth" Text="{Binding OvertimeMonthText}" FontSize="14" FontWeight="SemiBold"
+                                   MinWidth="102" TextAlignment="Center" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                        <Button x:Name="NextOvertimeMonthButton" Content="下个月" Command="{Binding NextOvertimeMonthCommand}"
+                                Margin="0,0,8,8" AutomationProperties.Name="查看下个月的加班记录"/>
+                        <Button x:Name="CurrentOvertimeMonthButton" Content="回到本月" Command="{Binding CurrentOvertimeMonthCommand}"
+                                Margin="0,0,8,8"/>
+                        <Button x:Name="RefreshOvertimeHistoryButton" Content="刷新" Command="{Binding RefreshOvertimeHistoryCommand}"
+                                Margin="0,0,0,8" ToolTip="重新读取记录，并重试尚未保存的下班记录"/>
+                    </WrapPanel>
+                    <TextBlock x:Name="OvertimeHistorySummary" Text="{Binding OvertimeSummaryText}" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ToolboxAccentBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                    <DataGrid x:Name="OvertimeHistoryGrid" ItemsSource="{Binding OvertimeRecords}"
+                              AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                              CanUserReorderColumns="False" CanUserSortColumns="False" MinHeight="124" MaxHeight="260"
+                              Style="{DynamicResource ToolboxDataGridStyle}"
+                              Visibility="{Binding HasOvertimeRecords, Converter={StaticResource OvertimeHistoryVisibilityConverter}}"
+                              AutomationProperties.Name="所选月份的实际加班记录">
+                        <DataGrid.Resources>
+                            <Style x:Key="OvertimeHistoryCellTextStyle" TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="TextWrapping" Value="Wrap"/>
+                            </Style>
+                        </DataGrid.Resources>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="日期" Binding="{Binding DateText}" Width="1.1*" MinWidth="104"
+                                                ElementStyle="{StaticResource OvertimeHistoryCellTextStyle}"/>
+                            <DataGridTextColumn Header="类型" Binding="{Binding DayTypeText}" Width="0.8*" MinWidth="66"
+                                                ElementStyle="{StaticResource OvertimeHistoryCellTextStyle}"/>
+                            <DataGridTextColumn Header="上班" Binding="{Binding StartedAtText}" Width="0.8*" MinWidth="66"
+                                                ElementStyle="{StaticResource OvertimeHistoryCellTextStyle}"/>
+                            <DataGridTextColumn Header="实际下班" Binding="{Binding FinishedAtText}" Width="1.1*" MinWidth="100"
+                                                ElementStyle="{StaticResource OvertimeHistoryCellTextStyle}"/>
+                            <DataGridTextColumn Header="实际加班" Binding="{Binding DurationText}" Width="1.6*" MinWidth="142"
+                                                ElementStyle="{StaticResource OvertimeHistoryCellTextStyle}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <TextBlock x:Name="OvertimeHistoryEmpty" Text="所选月份暂无下班记录。"
+                               Foreground="{DynamicResource ToolboxMutedBrush}" TextWrapping="Wrap" Margin="0,4,0,4">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasNoOvertimeRecords}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock x:Name="OvertimeHistoryError" Text="{Binding OvertimeHistoryError}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource ToolboxDangerTextBrush}" Margin="0,12,0,0"
+                               AutomationProperties.LiveSetting="Polite">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding OvertimeHistoryError}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding OvertimeHistoryError}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Text="按上班日期归档，已扣除午休和晚餐；同一天以最后一次下班为准。"
+                               Foreground="{DynamicResource ToolboxMutedBrush}" TextWrapping="Wrap" LineHeight="20" Margin="0,12,0,0"/>
+                </StackPanel>
+            </Border>
             <attendance:AttendancePanel Margin="0,20,0,0"/>
             <TextBlock Margin="0,20,0,0" Foreground="{DynamicResource ToolboxMutedBrush}" TextWrapping="Wrap" LineHeight="22"
                        Text="工作日 07:30—09:30 上班，9 小时后下班（含午休）；晚于 09:30 标记迟到，正常下班仍为 18:30。&#10;加班跳过 12:00—13:00 和 19:00—19:30，只有实际跨过的休息时段才扣除。倒计时是距离下班的真实时间，吃饭时仍继续倒数。&#10;内置中国大陆 2026 年官方节假日与调休安排，离线可用；其他年份请手动选择日期类型。切换工具继续计时，同日重开可恢复。"/>

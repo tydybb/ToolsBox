@@ -20,6 +20,7 @@ public sealed class CountdownStateStoreTests
     {
         string directory = Path.Combine(Path.GetTempPath(), "ToolsBox-countdown-test-" + Guid.NewGuid().ToString("N"));
         string path = Path.Combine(directory, "state.json");
+        string historyPath = Path.Combine(directory, "overtime-history.json");
         try
         {
             var store = new JsonCountdownStateStore(path);
@@ -34,14 +35,17 @@ public sealed class CountdownStateStoreTests
             Assert.True(restored.IsFinished);
             Assert.Equal("03:30:00", restored.TimerText);
             Assert.False(restored.IsOverdue);
-            Assert.Single(Directory.GetFiles(directory));
+            Assert.Equal(2, Directory.GetFiles(directory).Length);
+            Assert.Single(new JsonOvertimeHistoryStore(historyPath).Load());
             store.Clear();
             Assert.Null(store.Load());
+            Assert.True(File.Exists(historyPath));
             store.Clear();
         }
         finally
         {
             if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(historyPath)) File.Delete(historyPath);
             if (Directory.Exists(directory)) Directory.Delete(directory);
         }
     }

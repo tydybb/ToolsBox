@@ -4,6 +4,39 @@ namespace ToolsBox.App.Tests.Attendance;
 
 public class AttendanceImportTests
 {
+    [Fact]
+    public void RestDayPrefillsBeforePlanValidationAndLaterStartsUsingTheSameActualTime()
+    {
+        DateTime now = new(2026, 10, 24, 9, 0, 0), at = now.AddMinutes(-18);
+        using var vm = new WorkCountdownViewModel(() => now, new Memory(), false);
+        Assert.False(vm.ImportClockIn(at, () => throw new Exception("Fresh input needs no confirmation")));
+        Assert.Equal("08:42", vm.StartTimeText);
+        Assert.Equal("", vm.OvertimeText);
+        Assert.Null(vm.Schedule);
+        Assert.Contains("4", vm.ErrorMessage);
+        Assert.False(vm.ImportClockIn(at, () => throw new Exception("An unchanged prefill must not ask repeatedly")));
+        vm.OvertimeText = "4";
+        Assert.True(vm.ImportClockIn(at, () => true));
+        Assert.Equal(new DateTime(2026, 10, 24, 8, 42, 0), vm.Schedule!.Start);
+        Assert.Null(vm.Schedule.NormalEnd);
+    }
+
+    [Fact]
+    public void RestDayPrefillDoesNotBypassReplacementConfirmationOrFinishProtection()
+    {
+        DateTime now = new(2026, 10, 24, 10, 0, 0), at = now.AddMinutes(-18);
+        using var vm = new WorkCountdownViewModel(() => now, new Memory(), false);
+        vm.StartTimeText = "09:00";
+        Assert.False(vm.ImportClockIn(at, () => false));
+        Assert.Equal("09:00", vm.StartTimeText);
+        vm.OvertimeText = "4";
+        vm.StartCommand.Execute(null);
+        vm.FinishCommand.Execute(null);
+        Assert.False(vm.ImportClockIn(at, () => true));
+        Assert.Equal("09:00", vm.StartTimeText);
+        Assert.True(vm.IsFinished);
+    }
+
     private static readonly DateTime Now = new(2026,9,22,9,0,0);
     private sealed class Memory : ICountdownStateStore
     {

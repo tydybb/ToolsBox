@@ -36,7 +36,8 @@ public sealed class AttendanceCountdownBridge : IDisposable
         try
         {
             var options=_store.LoadOptions();var snapshot=_store.LoadSnapshot();DateTime now=_now();
-            if(!options.Enabled || !options.IsWorkday(DateOnly.FromDateTime(now)) || !AttendanceCoordinator.IsConfirmed(snapshot,options,now) ||
+            // Workday restrictions belong to polling/reminders, not a valid manual read.
+            if(!options.Enabled || !AttendanceCoordinator.IsConfirmed(snapshot,options,now) ||
                 snapshot!.ClockInAt==options.HandledClockIn)return;
             var at=snapshot.ClockInAt!.Value;bool declined=false;
             CountdownDayMode? mode=options.OverrideDate==DateOnly.FromDateTime(now)&&options.OverrideWorkday==true?CountdownDayMode.Workday:null;

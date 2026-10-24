@@ -23,6 +23,7 @@ public interface ICountdownStateStore
 public sealed class JsonCountdownStateStore : ICountdownStateStore
 {
     private readonly string _path;
+    internal string FilePath => _path;
 
     public JsonCountdownStateStore(string? path = null) => _path = Path.GetFullPath(path ?? Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ToolsBox", "work-countdown.json"));

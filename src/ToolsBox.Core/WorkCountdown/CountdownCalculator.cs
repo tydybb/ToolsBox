@@ -5,6 +5,11 @@ public static class CountdownCalculator
     private const long Hour = TimeSpan.TicksPerHour;
     private const long WorkingDayTicks = 22 * Hour + Hour / 2;
 
+    public static TimeSpan CalculateActualOvertime(DateTime overtimeStart, DateTime finishedAt) =>
+        finishedAt <= overtimeStart
+            ? TimeSpan.Zero
+            : TimeSpan.FromTicks(ToWorkingTicks(finishedAt) - ToWorkingTicks(overtimeStart));
+
     public static WorkSchedule Calculate(DateOnly date, TimeOnly startTime, DayKind kind, int overtimeHours)
     {
         if (startTime < new TimeOnly(7, 30))

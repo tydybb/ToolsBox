@@ -9,7 +9,7 @@ namespace ToolsBox.App.WorkCountdown;
 
 public sealed record CountdownDayChoice(CountdownDayMode Mode, string Label);
 
-public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
+public sealed partial class WorkCountdownViewModel : ObservableObject, IDisposable
 {
     private readonly Func<DateTime> _now;
     private readonly ICountdownStateStore _store;
@@ -26,20 +26,24 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
     private bool _disposed;
     private bool _overtimeEdited;
     private bool _inputsEdited;
+    private DateTime? _prefilledClockIn;
     private CountdownReaction _reaction = null!;
     private CountdownCardPresentation _card = null!;
     private bool _animationEnabled = true;
 
-    public WorkCountdownViewModel(Func<DateTime>? now = null, ICountdownStateStore? store = null, bool startTimer = true)
+    public WorkCountdownViewModel(Func<DateTime>? now = null, ICountdownStateStore? store = null, bool startTimer = true,
+        IOvertimeHistoryStore? historyStore = null)
     {
         _now = now ?? (() => DateTime.Now);
         _store = store ?? new JsonCountdownStateStore();
+        _historyStore = historyStore ?? DefaultHistoryStore(_store);
         _currentTime = _now();
         _overtimeInputDate = Today;
         StartCommand = new RelayCommand(Start, () => !_disposed);
         ResetCommand = new RelayCommand(Reset, () => !_disposed);
         UseCurrentTimeCommand = new RelayCommand(UseCurrentTime, () => !_disposed);
         FinishCommand = new RelayCommand(Finish, CanFinish);
+        InitializeOvertimeHistory();
         Restore();
         _reaction = SelectReaction();
         _card = CountdownCardPresentationSelector.Select(ReactionContext());
@@ -48,6 +52,7 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
             _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += OnTick;
             if (!IsFinished && string.IsNullOrEmpty(ErrorMessage)) _timer.Start();
+            StartOvertimeMonthTimer();
         }
     }
 
@@ -229,11 +234,12 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
         if (_disposed) return;
         _currentTime = _now();
         ClearExpiredOvertimeInput(_currentTime);
+        FollowCurrentOvertimeMonth();
         NotifyDisplay();
         RemindIfOffWorkReached();
     }
 
-    /// <summary>Only a real same-day clock-in can start a timer. Manual acknowledgement never calls this.</summary>
+    /// <summary>A real same-day read can fill the time; returns true only when a valid plan is applied.</summary>
     public bool ImportClockIn(DateTime clockIn, Func<bool> confirmReplacement, CountdownDayMode? inferredMode = null)
     {
         DateTime now = _now();
@@ -243,12 +249,27 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
         string time = clockIn.ToString("HH:mm",CultureInfo.InvariantCulture);
         CountdownDayMode mode=inferredMode??DayMode;
         string overtime=inferredMode==CountdownDayMode.Workday && _activeState is null && !_overtimeEdited?"0":OvertimeText;
+        bool needsRestDayPlan;
         try
         {
             if (!TryParseOvertime(overtime, out int hours)) throw new ArgumentException("加班时间必须是非负整数小时。");
-            _=Calculate(new(DateOnly.FromDateTime(now),time,mode,hours));
+            DayKind kind = mode switch
+            {
+                CountdownDayMode.Automatic => ChinaWorkCalendar.GetDay(DateOnly.FromDateTime(now)).Kind,
+                CountdownDayMode.Workday => DayKind.Workday,
+                CountdownDayMode.RestDay => DayKind.RestDay,
+                _ => DayKind.Unknown
+            };
+            needsRestDayPlan = kind == DayKind.RestDay && hours < 4;
+            if (!needsRestDayPlan) _=Calculate(new(DateOnly.FromDateTime(now),time,mode,hours));
         }
         catch(ArgumentException e){ErrorMessage=e.Message;return false;}
+        // Leave an incomplete prefill retryable after restart, without prompting every bridge tick.
+        if (needsRestDayPlan && _prefilledClockIn == clockIn && StartTimeText == time && DayMode == mode)
+        {
+            ErrorMessage = "已填入打卡时间；休息日加班至少 4 小时，请设置后开始计时。";
+            return false;
+        }
         bool same=_activeState?.WorkDate == DateOnly.FromDateTime(now) && _activeState.StartTime == time && _activeState.Mode==mode;
         if(same && !_inputsEdited && string.IsNullOrEmpty(ErrorMessage))return true;
         bool conflict = _activeState?.WorkDate == DateOnly.FromDateTime(now) ||
@@ -261,6 +282,14 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
         string old = StartTimeText;
         DayMode=mode;OvertimeText=overtime;
         StartTimeText = time;
+        if (needsRestDayPlan)
+        {
+            _currentTime = now;
+            _prefilledClockIn = clockIn;
+            ErrorMessage = "已填入打卡时间；休息日加班至少 4 小时，请设置后开始计时。";
+            NotifyDisplay();
+            return false;
+        }
         Start();
         if (_schedule?.Start.Date == now.Date && _schedule.Start.ToString("HH:mm",CultureInfo.InvariantCulture) == time) return string.IsNullOrEmpty(ErrorMessage);
         StartTimeText = old;
@@ -291,6 +320,7 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
         try { _store.Save(_activeState); }
         catch (Exception error) when (IsStorageError(error))
         { ErrorMessage = "已下班并停止计时，但无法保存记录，重启后可能恢复计时。"; }
+        SaveFinishedOvertime(_activeState, _schedule);
         NotifyDisplay();
         WorkFinished?.Invoke(this, EventArgs.Empty);
     }
@@ -353,7 +383,9 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
         try
         {
             CountdownState? saved = _store.Load();
-            if (saved is null || saved.WorkDate != Today) return;
+            if (saved is null) return;
+            RecoverFinishedOvertime(saved);
+            if (saved.WorkDate != Today) return;
             WorkSchedule schedule = Calculate(saved);
             if (saved.FinishedAt is DateTime finished && finished < schedule.Start)
                 throw new InvalidDataException("下班时间早于上班时间。");
@@ -460,5 +492,6 @@ public sealed class WorkCountdownViewModel : ObservableObject, IDisposable
         ResetCommand.RaiseCanExecuteChanged();
         UseCurrentTimeCommand.RaiseCanExecuteChanged();
         FinishCommand.RaiseCanExecuteChanged();
+        DisposeOvertimeHistory();
     }
 }
